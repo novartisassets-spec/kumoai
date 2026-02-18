@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+*.db
+*.log
+pdf-output/
+storage/uploads/
+storage/previews/
+tsconfig.tsbuildinfo
+nul
+math_p1.jpg
+math_p2.jpg
+mock_register.jpg
+npm
