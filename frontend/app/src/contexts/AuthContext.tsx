@@ -26,7 +26,7 @@ interface SignupData {
     adminPhone: string;
     email?: string;
     password: string;
-    schoolType?: 'PRIMARY' | 'SECONDARY' | 'BOTH';
+    schoolType: 'PRIMARY' | 'SECONDARY' | 'BOTH';
     address?: string;
 }
 
@@ -45,15 +45,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 try {
                     // Check if token is valid and not expired
                     if (!authService.isTokenExpired(token)) {
-                        const decoded = jwtDecode<User>(token);
-                        setUser(decoded);
+                        const decoded: any = jwtDecode(token);
+                        // Map token fields to User interface
+                        const mappedUser: User = {
+                            userId: decoded.userId || decoded.user_id || decoded.sub,
+                            phone: decoded.phone,
+                            role: decoded.role,
+                            schoolId: decoded.schoolId || decoded.school_id,
+                            schoolName: decoded.schoolName || decoded.school_name
+                        };
+                        console.log('[AuthContext] Token decoded, user:', mappedUser);
+                        setUser(mappedUser);
                     } else {
                         // Try to refresh
                         await authService.refreshToken();
                         const newToken = authService.getAccessToken();
                         if (newToken) {
-                            const decoded = jwtDecode<User>(newToken);
-                            setUser(decoded);
+                            const decoded: any = jwtDecode(newToken);
+                            const mappedUser: User = {
+                                userId: decoded.userId || decoded.user_id || decoded.sub,
+                                phone: decoded.phone,
+                                role: decoded.role,
+                                schoolId: decoded.schoolId || decoded.school_id,
+                                schoolName: decoded.schoolName || decoded.school_name
+                            };
+                            setUser(mappedUser);
                         }
                     }
                 } catch (err) {
@@ -75,7 +91,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const result = await authService.login({ phone, password });
 
             if (result.success && result.data?.user) {
-                setUser(result.data.user);
+                const userData: any = result.data.user;
+                // Handle both camelCase and snake_case field names from backend
+                const mappedUser: User = {
+                    userId: userData.userId || userData.user_id,
+                    phone: userData.phone,
+                    role: userData.role,
+                    schoolId: userData.schoolId || userData.school_id,
+                    schoolName: userData.schoolName || userData.school_name
+                };
+                console.log('[AuthContext] Login successful, user:', mappedUser);
+                setUser(mappedUser);
             } else {
                 throw new Error(result.error || 'Login failed');
             }
@@ -95,7 +121,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const result = await authService.signup(data);
 
             if (result.success && result.data?.user) {
-                setUser(result.data.user);
+                const userData: any = result.data.user;
+                // Handle both camelCase and snake_case field names from backend
+                const mappedUser: User = {
+                    userId: userData.userId || userData.user_id,
+                    phone: userData.phone,
+                    role: userData.role,
+                    schoolId: userData.schoolId || userData.school_id,
+                    schoolName: userData.schoolName || userData.school_name
+                };
+                console.log('[AuthContext] Signup successful, user:', mappedUser);
+                setUser(mappedUser);
             } else {
                 throw new Error(result.error || 'Signup failed');
             }

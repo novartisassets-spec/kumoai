@@ -127,8 +127,11 @@ export class AIProvider {
                 model: config.model,
             });
 
+            const rawText = chatCompletion.choices[0]?.message?.content || '';
+            logger.info({ model: config.model, rawLength: rawText.length, rawText: rawText.substring(0, 500) }, '🔍 [GROQ] Raw LLM Response');
+
             return {
-                text: chatCompletion.choices[0]?.message?.content || '',
+                text: rawText,
                 raw: chatCompletion
             };
         } catch (error: any) {

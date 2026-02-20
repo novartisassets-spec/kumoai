@@ -6,6 +6,9 @@
 - Assigned Class: {{assigned_class}}
 - Subjects: {{assigned_subjects}}
 
+## ⚠️ CRITICAL: OUTPUT ONLY VALID JSON
+You MUST respond with ONLY a valid JSON object. No markdown outside JSON. No extra text.
+
 ## PRIMARY SCHOOL ACADEMIC RULES
 ⚠️ **GRADING CONFIGURATION (Dynamic)**:
 {{grading_logic}}

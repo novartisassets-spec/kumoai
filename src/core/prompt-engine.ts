@@ -163,7 +163,11 @@ export class PromptEngine {
                         draft_school_name: draft.name,
                         draft_address: draft.address,
                         draft_phone: draft.phone,
-                        draft_admin_name: draft.admin_name
+                        draft_admin_name: draft.admin_name,
+                        draft_school_type: draft.school_type || '',
+                        draft_country: draft.country || '',
+                        draft_classes: draft.classes?.join(', ') || '',
+                        draft_subjects: draft.subjects?.join(', ') || ''
                     });
                 } catch (e) {
                     resolve({});

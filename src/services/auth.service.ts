@@ -259,15 +259,17 @@ export async function signup(data: SignupData): Promise<{ user: UserPayload; tok
 
     // Create school
     const schoolId = uuidv4();
+    const schoolTypeValue = schoolType || 'SECONDARY';
     await new Promise<void>((resolve, reject) => {
         db.getDB().run(
-            `INSERT INTO schools (id, name, admin_phone, config_json, setup_status)
-             VALUES (?, ?, ?, ?, ?)`,
+            `INSERT INTO schools (id, name, admin_phone, school_type, config_json, setup_status)
+             VALUES (?, ?, ?, ?, ?, ?)`,
             [
                 schoolId,
                 schoolName,
                 adminPhone,
-                JSON.stringify({ address, schoolType: schoolType || 'SECONDARY', email }),
+                schoolTypeValue,
+                JSON.stringify({ address, email }),
                 'PENDING_SETUP'
             ],
             (err) => {

@@ -469,36 +469,14 @@ export class WhatsAppTransport {
     /**
      * ✅ Send welcome message to admin after WhatsApp connection opens
      * This is triggered when the QR code is scanned and connection is established
+     * Now delegates to SA agent for personalized setup flow
      */
     private async sendAdminWelcomeMessage(): Promise<void> {
         try {
-            // Check if we've already sent a welcome message (to avoid duplicates on reconnect)
-            const welcomeSent = await new Promise<boolean>((resolve) => {
-                db.getDB().get(
-                    `SELECT COUNT(*) as count FROM messages 
-                     WHERE action_performed = 'ADMIN_WELCOME_SENT' 
-                     AND timestamp > ?`,
-                    [Date.now() - 24 * 60 * 60 * 1000], // Within last 24 hours
-                    (err: any, row: any) => {
-                        if (err) {
-                            logger.warn({ err }, '⚠️ [TRANSPORT] Could not check welcome message status');
-                            resolve(false);
-                        } else {
-                            resolve((row?.count || 0) > 0);
-                        }
-                    }
-                );
-            });
-
-            if (welcomeSent) {
-                logger.info('[TRANSPORT] Admin welcome already sent recently, skipping');
-                return;
-            }
-
             // Get school and admin info
             const school: any = await new Promise((resolve) => {
                 db.getDB().get(
-                    `SELECT id, name, admin_phone FROM schools LIMIT 1`,
+                    `SELECT id, name, admin_phone, setup_status FROM schools LIMIT 1`,
                     (err: any, row: any) => {
                         if (err) {
                             logger.error({ err }, '❌ [TRANSPORT] Could not fetch school for welcome message');
@@ -516,62 +494,14 @@ export class WhatsAppTransport {
             }
 
             // Check if this is a fresh setup (school has PENDING_SETUP status)
-            const isFreshSetup = await new Promise<boolean>((resolve) => {
-                db.getDB().get(
-                    `SELECT setup_status FROM schools WHERE id = ?`,
-                    [school.id],
-                    (err: any, row: any) => {
-                        if (err || !row) {
-                            resolve(false);
-                        } else {
-                            resolve(row.setup_status === 'PENDING_SETUP');
-                        }
-                    }
-                );
-            });
-
-            if (!isFreshSetup) {
+            if (school.setup_status !== 'PENDING_SETUP') {
                 logger.info('[TRANSPORT] School already operational, no welcome needed');
                 return;
             }
 
-            // Send welcome message to admin
-            const welcomeMessage = `🎉 *Welcome to KUMO!*
-
-Hi! I'm your School Admin Assistant. 
-
-*Quick question: What should I call you?*
-
-Once I know your name, I'll guide you through setting up your school - it's quick and easy!`;
-
-            const adminJid = school.admin_phone.includes('@') 
-                ? school.admin_phone 
-                : school.admin_phone + '@s.whatsapp.net';
-
-            await this.sock!.sendMessage(adminJid, { text: welcomeMessage });
-
-            // Record that welcome was sent
-            await new Promise<void>((resolve) => {
-                db.getDB().run(
-                    `INSERT INTO messages (id, school_id, from_phone, type, body, timestamp, action_performed, context) 
-                     VALUES (?, ?, ?, 'text', ?, ?, 'ADMIN_WELCOME_SENT', 'SYSTEM')`,
-                    [
-                        `welcome-${Date.now()}`,
-                        school.id,
-                        school.admin_phone,
-                        welcomeMessage,
-                        Date.now()
-                    ],
-                    (err: any) => {
-                        if (err) {
-                            logger.warn({ err }, '⚠️ [TRANSPORT] Could not record welcome message');
-                        }
-                        resolve();
-                    }
-                );
-            });
-
-            logger.info({ adminPhone: school.admin_phone }, '✅ [TRANSPORT] Admin welcome message sent successfully');
+            // ✅ Delegate to SA agent for personalized welcome with prefilled universe
+            const { SchoolAdminAgent } = await import('../../agents/sa/index');
+            await SchoolAdminAgent.sendSetupWelcome(school.id);
 
         } catch (error) {
             logger.error({ error }, '❌ [TRANSPORT] Failed to send admin welcome message');

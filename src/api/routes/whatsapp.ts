@@ -106,7 +106,7 @@ router.post('/connect/:schoolId', async (req: Request, res: Response) => {
     try {
         const schoolId = req.params.schoolId as string;
         console.log(`\n📱 CONNECT REQUEST received for school: ${schoolId}`);
-        console.log(`   User: ${req.user?.userId || 'unknown'}`);
+        console.log(`   User: ${(req as any).user?.userId || 'unknown'}`);
         console.log(`   Headers: ${JSON.stringify(req.headers.authorization ? 'Bearer [present]' : 'none')}`);
 
         // Check if already connected

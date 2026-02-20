@@ -8,6 +8,7 @@
     "start": "node dist/index.js",
     "dev": "ts-node --transpile-only src/index.ts",
     "dev:full": "ts-node src/index.ts",
+    "start:unified": "./start-unified.sh",
     "db:init": "ts-node --transpile-only scripts/init-db.ts",
     "test:manual:reset": "ts-node --transpile-only scripts/manual-test-reset.ts",
     "test:full": "ts-node --transpile-only scripts/test-runner.ts full",

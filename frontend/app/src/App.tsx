@@ -721,6 +721,7 @@ function SignupPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' | 
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     schoolName: '',
+    schoolType: 'SECONDARY' as 'PRIMARY' | 'SECONDARY' | 'BOTH',
     email: '',
     adminPhone: '',
     password: '',
@@ -754,6 +755,7 @@ function SignupPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' | 
     try {
       await signup({
         schoolName: formData.schoolName,
+        schoolType: formData.schoolType,
         adminPhone: formData.adminPhone,
         email: formData.email || undefined,
         password: formData.password
@@ -868,6 +870,27 @@ function SignupPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' | 
                       className="auth-input"
                       required
                     />
+                  </div>
+                </div>
+
+                {/* School Type */}
+                <div className="space-y-1.5">
+                  <label className="text-white/70 text-sm font-medium flex items-center gap-2">
+                    <Building className="w-4 h-4" />
+                    School Type
+                  </label>
+                  <div className="auth-input-wrapper">
+                    <select
+                      name="schoolType"
+                      value={formData.schoolType}
+                      onChange={(e) => setFormData({ ...formData, schoolType: e.target.value as 'PRIMARY' | 'SECONDARY' | 'BOTH' })}
+                      className="auth-input bg-transparent"
+                      required
+                    >
+                      <option value="SECONDARY">Secondary School (JSS 1 - SS 3)</option>
+                      <option value="PRIMARY">Primary School (Primary 1-6)</option>
+                      <option value="BOTH">Both Primary & Secondary</option>
+                    </select>
                   </div>
                 </div>
 
@@ -2808,6 +2831,9 @@ function DashboardLayout({ children, currentPage, onNavigate }: { children: Reac
 // Dashboard Overview Page - Fintech Style
 function DashboardOverview({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { user } = useAuth();
+  
+  console.log('[DashboardOverview] Component rendering, user:', user);
+  
   const [activeTab, setActiveTab] = useState<'overview' | 'academics' | 'reports'>('overview');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
@@ -2821,8 +2847,13 @@ function DashboardOverview({ onNavigate }: { onNavigate: (page: string) => void 
   // Fetch dashboard data on mount
   useEffect(() => {
     const fetchDashboardData = async () => {
-      if (!user?.schoolId) return;
+      if (!user?.schoolId) {
+        console.log('[Dashboard] No schoolId found, skipping data fetch');
+        setIsLoading(false);
+        return;
+      }
       
+      console.log('[Dashboard] Fetching data for school:', user.schoolId);
       setIsLoading(true);
       setError(null);
       
@@ -2832,11 +2863,18 @@ function DashboardOverview({ onNavigate }: { onNavigate: (page: string) => void 
           authService.getSchoolInfo()
         ]);
         
+        console.log('[Dashboard] Stats response:', statsRes);
+        console.log('[Dashboard] School response:', schoolRes);
+        
         if (statsRes.success) {
           setStats(statsRes.data);
+        } else {
+          console.error('[Dashboard] Stats fetch failed:', statsRes.error);
         }
         if (schoolRes.success) {
           setSchoolInfo(schoolRes.data);
+        } else {
+          console.error('[Dashboard] School info fetch failed:', schoolRes.error);
         }
       } catch (err: any) {
         console.error('Failed to fetch dashboard data:', err);
@@ -3450,7 +3488,10 @@ function AcademicsPage({ onNavigate: _onNavigate }: { onNavigate: (page: string)
       try {
         const res = await authService.getSubjects({ class_level: selectedClass });
         if (res?.success && Array.isArray(res.data)) {
-          const subjectNames = res.data.map((s: any) => s?.name).filter(Boolean);
+          const names: string[] = res.data
+            .map((s: any) => s?.name)
+            .filter((n: any): n is string => typeof n === 'string' && n.length > 0);
+          const subjectNames: string[] = Array.from(new Set(names));
           setSubjects(subjectNames);
           if (subjectNames.length > 0) setSelectedSubject(subjectNames[0]);
           else setSelectedSubject('');
@@ -4502,6 +4543,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState<string>(getPageFromUrl());
 
   const navigateTo = (page: string) => {
+    console.log('[App] navigateTo called with page:', page);
     setCurrentPage(page);
     // Update URL without page reload for dashboard pages
     if (['dashboard', 'users', 'academics', 'reports', 'analytics', 'settings', 'profile', 'connect'].includes(page)) {
@@ -4510,10 +4552,12 @@ function App() {
       window.history.pushState({}, '', '/');
     }
     window.scrollTo(0, 0);
+    console.log('[App] Navigation complete, currentPage set to:', page);
   };
 
   // Dashboard pages
   if (['dashboard', 'users', 'academics', 'reports', 'analytics', 'settings', 'profile', 'connect'].includes(currentPage)) {
+    console.log('[App] Rendering dashboard page:', currentPage);
     return (
       <ProtectedRoute onNavigate={navigateTo}>
         <DashboardLayout currentPage={currentPage} onNavigate={navigateTo}>

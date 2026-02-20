@@ -48,6 +48,24 @@ export const ACTION_REGISTRY: Record<string, ActionSpec> = {
         description: 'Escalate payment to admin for verification',
         conversational: true
     },
+    'ENGAGE_PARENTS': {
+        action: 'ENGAGE_PARENTS',
+        agent: 'SA',
+        required_role: 'admin',
+        description: 'Engage parents proactively about student absence',
+        conversational: true,
+        requires_intent_clear: true,
+        requires_authority: true
+    },
+    'ENGAGE_PARENT_ON_ABSENCE': {
+        action: 'ENGAGE_PARENT_ON_ABSENCE',
+        agent: 'SA',
+        required_role: 'admin',
+        description: 'Contact parent about student absence',
+        conversational: true,
+        requires_intent_clear: true,
+        requires_authority: true
+    },
     'FETCH_LOCKED_RESULT': {
         action: 'FETCH_LOCKED_RESULT',
         agent: 'PA',

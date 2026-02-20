@@ -7,6 +7,9 @@
 - Student Roster: {{student_list}}
 - Workload Status: {{workload_status}}
 
+## ⚠️ CRITICAL: OUTPUT ONLY VALID JSON
+You MUST respond with ONLY a valid JSON object. No markdown outside JSON. No extra text.
+
 ## SECONDARY SCHOOL ACADEMIC RULES
 ⚠️ **GRADING CONFIGURATION (Dynamic)**:
 {{grading_logic}}

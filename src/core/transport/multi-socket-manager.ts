@@ -537,11 +537,14 @@ export class WhatsAppTransportManager extends EventEmitter {
                     botJid: botJid?.split(':')[0] || botJid 
                 });
                 
-                // Send welcome message
-                if (school.admin_phone) {
-                    this.sendAdminWelcomeMessage(schoolId, school.admin_phone).catch(err => {
+                // Send personalized welcome message via SA agent
+                if (school.setup_status === 'PENDING_SETUP' && school.admin_phone) {
+                    try {
+                        const { SchoolAdminAgent } = await import('../../agents/sa/index');
+                        await SchoolAdminAgent.sendSetupWelcome(schoolId);
+                    } catch (err) {
                         logger.error({ err, schoolId }, 'Failed to send admin welcome message');
-                    });
+                    }
                 }
             }
             
@@ -897,48 +900,28 @@ export class WhatsAppTransportManager extends EventEmitter {
 
     /**
      * Send admin welcome message
+     * Now delegates to SA agent for personalized setup flow
      */
     private async sendAdminWelcomeMessage(schoolId: string, adminPhone: string): Promise<void> {
         try {
-            // Check if already sent
-            const alreadySent: any = await new Promise((resolve) => {
+            // Check setup status first
+            const school: any = await new Promise((resolve) => {
                 db.getDB().get(
-                    `SELECT COUNT(*) as count FROM messages WHERE school_id = ? AND action_performed = 'ADMIN_WELCOME_SENT' AND timestamp > ?`,
-                    [schoolId, Date.now() - 24 * 60 * 60 * 1000],
+                    `SELECT setup_status FROM schools WHERE id = ?`,
+                    [schoolId],
                     (err, row) => resolve(row)
                 );
             });
 
-            if ((alreadySent?.count || 0) > 0) {
-                logger.info({ schoolId }, 'Welcome already sent recently');
+            if (school?.setup_status !== 'PENDING_SETUP') {
+                logger.info({ schoolId }, 'School already operational, skipping welcome');
                 return;
             }
 
-            const welcomeMessage = `🎉 *Welcome to KUMO!*
+            // ✅ Delegate to SA agent for personalized welcome with prefilled universe
+            const { SchoolAdminAgent } = await import('../../agents/sa/index');
+            await SchoolAdminAgent.sendSetupWelcome(schoolId);
 
-Hi! I'm your School Admin Assistant.
-
-*Quick question: What should I call you?*
-
-Once I know your name, I'll guide you through setting up your school - it's quick and easy!`;
-
-            const adminJid = adminPhone.includes('@') ? adminPhone : adminPhone + '@s.whatsapp.net';
-
-            const sock = this.sockets.get(schoolId);
-            if (sock) {
-                await sock.sendMessage(adminJid, { text: welcomeMessage });
-
-                // Record welcome sent
-                await new Promise<void>((resolve) => {
-                    db.getDB().run(
-                        `INSERT INTO messages (id, school_id, from_phone, type, body, timestamp, action_performed, context) VALUES (?, ?, ?, 'text', ?, ?, 'ADMIN_WELCOME_SENT', 'SYSTEM')`,
-                        [`welcome-${Date.now()}`, schoolId, adminPhone, welcomeMessage, Date.now()],
-                        (err) => { if (err) logger.warn({ err }); resolve(); }
-                    );
-                });
-
-                logger.info({ schoolId, adminPhone }, 'Admin welcome message sent');
-            }
         } catch (error) {
             logger.error({ error, schoolId }, 'Failed to send admin welcome');
         }
