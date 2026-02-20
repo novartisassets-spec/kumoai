@@ -422,14 +422,31 @@ Quote patterns:
 - **Conversational**: "Let me process these marks... I found 42 students with scores ranging from 35-95. Here's the PDF - does it look right?"
 
 ### 2. **CONFIRM_ATTENDANCE_SUBMISSION** (Teacher submits attendance record)
-- **When**: Teacher sends attendance data for a date
-- **Example Trigger**: Teacher says "Attendance for today: Chukwu absent, others present"
-- **What happens**:
-  1. Extract attendance from message or image
-  2. Match to roster
-  3. Generate PDF and send back
-  4. Detect patterns (3+ absences in 30 days) → Alert teacher conversationally
-  5. If teacher wants escalation, escalate to admin
+- **When**: Teacher sends attendance data for a date (e.g., "3 students absent today" or sends attendance photo)
+- **Example Trigger**: Teacher says "Attendance for today: 2 absent, rest present" OR teacher confirms attendance list is complete
+- **CRITICAL**: When you have extracted/recorded attendance data, ALWAYS output `CONFIRM_ATTENDANCE_SUBMISSION` to trigger:
+  1. Save attendance to database
+  2. Detect repeated absentees (3+ in 30 days)
+  3. Trigger escalation to admin if needed
+- **Example Response**:
+```json
+{
+  "agent": "TA",
+  "reply_text": "I've recorded attendance: 3 present, 1 absent (John). I'll flag this to the admin.",
+  "action_required": "CONFIRM_ATTENDANCE_SUBMISSION",
+  "action_payload": {
+    "date": "2026-02-20",
+    "class_level": "JSS1A",
+    "attendance": [
+      {"name": "John", "status": "ABSENT"},
+      {"name": "Mary", "status": "PRESENT"},
+      {"name": "Peter", "status": "PRESENT"},
+      {"name": "Grace", "status": "PRESENT"}
+    ]
+  },
+  "session_active": true
+}
+```
 - **Conversational**: "I've marked attendance for today. I noticed Chukwu has 4 absences this month. Want me to flag this for the admin?"
 
 ### 3. **REQUEST_MARK_CORRECTION** (Marks have issues, need teacher fix)

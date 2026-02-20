@@ -1138,7 +1138,7 @@ Keep it co-pilot-like and professional. Use JSON.`;
             name: s.name || s.student_name,
             roll_number: s.roll_number || null,
             class_name: parsed.internal_payload?.class_name || 'Unknown',
-            extracted_from: s.extracted_from || 'VISION' as const
+            extracted_from: (s.extracted_from === 'VISION' || s.extracted_from === 'MANUAL') ? s.extracted_from : 'MANUAL' as const
         }))];
 
         // 1. Save to setup state ONLY (draft mode - not operational yet)
@@ -1513,6 +1513,22 @@ Keep it co-pilot-like and professional. Use JSON.`;
         const workloadForStudents = setupData?.workload_json || {};
         const defaultClass = Object.keys(workloadForStudents)[0] || 'Unknown';
         
+        // ✅ FIX: Save teacher's assigned_class from workload to users table
+        if (defaultClass && defaultClass !== 'Unknown') {
+          try {
+            await new Promise<void>((resolve, reject) => {
+              db.getDB().run(
+                `UPDATE users SET assigned_class = ?, school_type = 'PRIMARY' WHERE id = ? AND school_id = ?`,
+                [defaultClass, teacherId, schoolId],
+                (err) => err ? reject(err) : resolve()
+              );
+            });
+            logger.info({ teacherId, defaultClass }, '✅ Teacher assigned_class updated from workload');
+          } catch (err) {
+            logger.error({ err, teacherId, defaultClass }, '❌ Failed to update assigned_class');
+          }
+        }
+        
         if (finalStudents.length > 0) {
           // Group students by class to handle multi-class setups correctly
           const studentsByClass: Record<string, any[]> = {};
@@ -1842,17 +1858,39 @@ Keep it co-pilot-like and professional. Use JSON.`;
   ): Promise<TAOutput> {
     const payload = output.action_payload;
     const markedDate = payload?.marked_date || new Date().toISOString().split('T')[0];
-    const classLevel = payload?.class_level || message.identity?.assignedClass || 'Unknown';
+    const teacherAssignedClass = message.identity?.assignedClass;
+    let classLevel = payload?.class_level;
+    
+    // If LLM class doesn't match teacher's assigned class, use teacher's class
+    // This handles cases where LLM shortens "Primary 3" to "P3" etc
+    if (!classLevel || (teacherAssignedClass && classLevel !== teacherAssignedClass && !teacherAssignedClass.includes(classLevel))) {
+      classLevel = teacherAssignedClass || 'Unknown';
+    }
     const termId = payload?.term_id || 'current';
     
-    // List of student names or IDs that are ABSENT
-    const absentInput = payload?.absent_students || [];
+    // Support multiple formats from LLM:
+    // 1. absent_students: ["name1", "name2"]
+    // 2. absent: ["name1", "name2"]  
+    // 3. attendance: [{name: "name1", status: "ABSENT"}, {name: "name2", status: "PRESENT"}]
+    // 4. students: [{name: "name1", status: "ABSENT"}, ...]
+    const absentInput = payload?.absent_students || payload?.absent || [];
+    
+    // Extract absent students from attendance/students array if present
+    const attendanceArray = (payload as any)?.attendance || (payload as any)?.students || [];
+    const attendanceAbsentees = attendanceArray
+        .filter((a: any) => a.status === 'ABSENT' || a.status === 'A' || a.status === 'absent')
+        .map((a: any) => a.name || a.student_name);
+    
+    // Combine all absent student names
+    const allAbsentNames = [...absentInput, ...attendanceAbsentees];
     
     if (!teacherId) {
         output.reply_text = "I couldn't identify you. Please provide your teacher token.";
         output.action_required = 'NONE';
         return output;
     }
+
+    logger.info({ teacherId, classLevel, termId, absentInput, allAbsentNames }, '🔍 handleAttendanceSubmission START');
 
     try {
         // 1. Get all students in this class
@@ -1868,7 +1906,7 @@ Keep it co-pilot-like and professional. Use JSON.`;
         const resolvedAbsentees: any[] = [];
         const resolutionErrors: string[] = [];
 
-        for (const name of absentInput) {
+        for (const name of allAbsentNames) {
             const res = await this.resolveStudentIdentity(teacherId, schoolId, name, classLevel, termId);
             if (res.success) {
                 resolvedAbsentees.push(res.student);
@@ -1909,6 +1947,8 @@ Keep it co-pilot-like and professional. Use JSON.`;
         }
 
         const absentStudents = attendanceRecords.filter(r => !r.present);
+
+        logger.info({ absentCount: absentStudents.length, absentStudents: absentStudents.map(s => s.student_name) }, '🔍 Attendance check:');
 
         await AuditTrailService.logAuditEvent({
             actor_phone: message.from,

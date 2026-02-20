@@ -249,11 +249,13 @@ async function main() {
                 // Check if user is a teacher
                 const teacher: any = await new Promise((resolve) => {
                     db.getDB().get(
-                        `SELECT id, name, role, school_id FROM users WHERE phone = ? AND role = 'teacher'`,
+                        `SELECT id, name, role, school_id, assigned_class FROM users WHERE phone = ? AND role = 'teacher'`,
                         [normalizedFrom],
                         (err, row) => resolve(row)
                     );
                 });
+
+                const schoolId = teacher?.school_id || '3876fd28-bfe7-4450-bc69-bad51d533330';
 
                 // Create a mock routed message for TA
                 const message = {
@@ -265,13 +267,14 @@ async function main() {
                     timestamp: Date.now(),
                     source: 'user' as const,
                     context: 'TA' as const,
-                    schoolId: teacher?.school_id || '3876fd28-bfe7-4450-bc69-bad51d533330',
+                    schoolId: schoolId,
                     identity: teacher ? {
                         userId: teacher.id,
                         phone: normalizedFrom,
                         role: 'teacher' as const,
                         schoolId: teacher.school_id,
-                        name: teacher.name
+                        name: teacher.name,
+                        assignedClass: teacher.assigned_class
                     } : undefined
                 };
 

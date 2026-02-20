@@ -57,6 +57,7 @@ export interface TAOutput {
         marked_date?: string;
         should_escalate?: boolean;
         absent_students?: string[];
+        absent?: string[]; // Alternative field name from LLM
         
         // For REQUEST_TEACHER_CONFIRMATION action
         matched_marks?: any[];
