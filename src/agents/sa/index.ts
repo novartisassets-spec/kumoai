@@ -336,12 +336,30 @@ export class SchoolAdminAgent extends BaseAgent {
                 if (contextData.subject) {
                     escalationContext += `- **SUBJECT**: ${contextData.subject}\n`;
                 }
+                // Add specific instructions for absence escalations
+                if (esc.escalation_type === 'ATTENDANCE_ABSENCE') {
+                    escalationContext += `- **ALLOWED ACTIONS**: ENGAGE_PARENTS, IGNORE_FOR_NOW\n`;
+                    // Include the absentees list so LLM knows which students
+                    const absentees = contextData.absentees;
+                    if (absentees && Array.isArray(absentees) && absentees.length > 0) {
+                        const absenteeNames = absentees.map((s: any) => s.student_name || s.name || 'Unknown').join(', ');
+                        escalationContext += `- **ABSENT STUDENTS**: ${absenteeNames}\n`;
+                        escalationContext += `- **ABSENTEE DATA** (use in action_payload): ${JSON.stringify(absentees.map((s: any) => ({ name: s.student_name || s.name })))}\n`;
+                    }
+                    if (contextData.class_level) {
+                        escalationContext += `- **CLASS**: ${contextData.class_level}\n`;
+                    }
+                    if (contextData.marked_date) {
+                        escalationContext += `- **DATE**: ${contextData.marked_date}\n`;
+                    }
+                }
                 escalationContext += '\n';
             });
-            escalationContext += '\n**CRITICAL**: When responding to these escalations, you MUST:\n';
+            escalationContext += '\n**CRITICAL**: When responding to these escalations:\n';
             escalationContext += '1. Reference the exact ESCALATION ID in your response\n';
-            escalationContext += '2. Set action_required to "CLOSE_ESCALATION" when making a decision\n';
-            escalationContext += '3. Include escalation_payload with escalation_id, admin_decision (APPROVE/REJECT/MODIFY), and admin_instruction\n\n';
+            // Add absence-specific guidance
+            escalationContext += '2. For ATTENDANCE_ABSENCE: If admin says "Yes", "contact parents", "engage parents" → set action_required: "ENGAGE_PARENTS" with absentees in payload\n';
+            escalationContext += '3. Include escalation_payload with escalation_id, admin_decision, and admin_instruction\n\n';
         }
 
         // Fetch admin name for personalization
@@ -466,14 +484,40 @@ export class SchoolAdminAgent extends BaseAgent {
                 output.action_required = 'RELEASE_RESULTS';
                 output.intent_clear = true;
                 output.authority_acknowledged = true;
-                
-                const escContext = typeof pendingEscalation.context === 'string' ? JSON.parse(pendingEscalation.context) : pendingEscalation.context;
-                (output as any).action_payload = {
-                    ...(output.action_payload || {}),
-                    class_level: escContext?.class_level,
-                    term_id: escContext?.term_id || 'current'
-                };
             }
+
+            // ✅ NEW: Aggressive inference for ATTENDANCE_ABSENCE - Engage Parents
+            // Fallback: If LLM doesn't output ENGAGE_PARENTS, check for explicit approval keywords
+            const bodyLower = message.body.toLowerCase();
+            const isAbsenceEscalation = pendingEscalation?.escalation_type === 'ATTENDANCE_ABSENCE';
+            const wantsEngageParents = bodyLower.includes('yes') || 
+                                        bodyLower.includes('engage') || 
+                                        bodyLower.includes('contact parents') ||
+                                        bodyLower.includes('do it') ||
+                                        bodyLower.includes('go ahead') ||
+                                        bodyLower.includes('please do');
+            
+            if (isAbsenceEscalation && wantsEngageParents && output.action_required === 'NONE') {
+                // Extract absentees from escalation context
+                const escContext = typeof pendingEscalation.context === 'string' 
+                    ? JSON.parse(pendingEscalation.context || '{}') 
+                    : (pendingEscalation.context || {});
+                
+                const absentees = escContext.absentees || [];
+                
+                if (absentees.length > 0) {
+                    logger.info({ escalationId: pendingEscalation.id, absentees }, '🧬 [GOD_MODE] Aggressively inferring ENGAGE_PARENTS from context (LLM fallback)');
+                    output.action_required = 'ENGAGE_PARENTS';
+                    output.intent_clear = true;
+                    output.authority_acknowledged = true;
+                    output.action_payload = {
+                        absentees: absentees.map((s: any) => ({ name: s.student_name || s.name })),
+                        reason: 'Student absence - contacting parent'
+                    };
+                }
+            }
+
+            // For ATTENDANCE_ABSENCE - let LLM decide based on escalation context
 
             // 🛡️ GOD MODE SAFETY RAIL: Force real IDs from escalation context to prevent LLM hallucinations
             if (pendingEscalation && (output.action_required === 'APPROVE_MARK_SUBMISSION' || 
@@ -1717,7 +1761,11 @@ export class SchoolAdminAgent extends BaseAgent {
 
             // ✅ NEW: ENGAGE_PARENTS handler (Absence Checkups)
             if (output.action_required === 'ENGAGE_PARENTS' || (output.action_required as string) === 'ENGAGE_PARENT_ON_ABSENCE') {
-                if (!output.intent_clear || !output.authority_acknowledged) {
+                // Check if admin explicitly confirmed (e.g., said "yes", "confirm", "do it")
+                const bodyLower = message.body.toLowerCase();
+                const explicitlyConfirmed = bodyLower.includes('yes') || bodyLower.includes('confirm') || bodyLower.includes('do it') || bodyLower.includes('go ahead') || bodyLower.includes('please do');
+                
+                if (!output.intent_clear && !explicitlyConfirmed) {
                     output.reply_text = "Engaging parents proactively requires explicit confirmation. Please confirm you want me to contact the parents regarding student attendance.";
                     output.action_required = 'NONE';
                     return output;
