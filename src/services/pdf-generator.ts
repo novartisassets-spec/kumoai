@@ -11,6 +11,8 @@ import { logger } from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
+import { supabaseStorage } from './supabase-storage';
+import { ENV } from '../config/env';
 
 // --- THEME CONFIGURATION ---
 const THEME = {
@@ -39,6 +41,7 @@ export interface PDFGenerationResponse {
     documentId: string;
     filePath: string;
     fileName: string;
+    cdnUrl?: string;
     mimeType: string;
     generatedAt: number;
     schoolName: string;
@@ -99,10 +102,33 @@ export class PDFGenerator {
                 writeStream.on('error', reject);
             });
 
+            let cdnUrl: string | undefined;
+
+            if (supabaseStorage.isAvailable()) {
+                try {
+                    const fileBuffer = fs.readFileSync(filePath);
+                    const dateFolder = new Date().toISOString().split('T')[0].replace(/-/g, '/');
+                    const storagePath = `${request.schoolId}/${dateFolder}/${fileName}`;
+                    
+                    const result = await supabaseStorage.uploadFile(
+                        'pdf-output',
+                        storagePath,
+                        fileBuffer,
+                        'application/pdf'
+                    );
+                    
+                    cdnUrl = result.url;
+                    logger.info({ documentId, url: cdnUrl }, 'PDF uploaded to Supabase Storage');
+                } catch (supabaseErr) {
+                    logger.warn({ supabaseErr, documentId }, 'Failed to upload to Supabase, using local file');
+                }
+            }
+
             return {
                 documentId,
                 filePath,
                 fileName,
+                cdnUrl,
                 mimeType: 'application/pdf',
                 generatedAt: request.timestamp,
                 schoolName: request.schoolName

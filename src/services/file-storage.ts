@@ -10,15 +10,16 @@ import path from 'path';
 import crypto from 'crypto';
 import { logger } from '../utils/logger';
 import { FileStorageRepository } from '../db/repositories/file-storage.repo';
+import { supabaseStorage } from './supabase-storage';
 
 export interface StorageConfig {
-    type: 'local' | 's3'; // 's3' requires AWS credentials
-    localBasePath?: string; // Only if type = 'local'
+    type: 'local' | 's3' | 'supabase';
+    localBasePath?: string;
     s3Bucket?: string;
     s3Region?: string;
     s3Prefix?: string;
-    retentionDays?: number; // Auto-cleanup after N days
-    virusScanEnabled?: boolean; // Enterprise feature
+    retentionDays?: number;
+    virusScanEnabled?: boolean;
 }
 
 export interface StorageResult {
@@ -94,6 +95,8 @@ export class FileStorageService {
 
             if (this.config.type === 's3') {
                 result = await this.uploadToS3(fileId, fileName, fileBuffer, mimeType, checksum);
+            } else if (this.config.type === 'supabase') {
+                result = await this.uploadToSupabase(schoolId, fileId, fileName, fileBuffer, mimeType, checksum);
             } else {
                 result = await this.uploadToLocal(fileId, fileName, fileBuffer, mimeType, checksum);
             }
@@ -272,9 +275,34 @@ export class FileStorageService {
         mimeType: string,
         checksum: string
     ): Promise<StorageResult> {
-        // TODO: Implement S3 upload
-        // Requires: AWS SDK initialization and credentials
         throw new Error('S3 storage not yet implemented. Use local storage for now.');
+    }
+
+    private async uploadToSupabase(
+        schoolId: string,
+        fileId: string,
+        fileName: string,
+        fileBuffer: Buffer,
+        mimeType: string,
+        checksum: string
+    ): Promise<StorageResult> {
+        const dateFolder = this.getDateFolder();
+        const filePath = `${schoolId}/${dateFolder}/${fileId}_${path.basename(fileName).replace(/[^a-z0-9._-]/gi, '_')}`;
+        
+        const bucket = mimeType.startsWith('image/') ? 'media' : 
+                       mimeType === 'application/pdf' ? 'pdf-output' : 'media';
+
+        const result = await supabaseStorage.uploadFile(bucket, filePath, fileBuffer, mimeType);
+
+        return {
+            success: result.success,
+            fileId,
+            storagePath: result.path,
+            cdnUrl: result.url,
+            checksum,
+            sizeBytes: fileBuffer.length,
+            mimeType
+        };
     }
 
     private async downloadFromS3(s3Path: string): Promise<Buffer> {

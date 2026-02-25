@@ -9,6 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
 import { logger } from '../utils/logger';
+import { supabaseStorage } from './supabase-storage';
 
 export interface SigningCertificate {
     certificateId: string;
@@ -393,7 +394,30 @@ export class PdfSigningService {
             doc.end();
 
             return await new Promise<string>((resolve, reject) => {
-                stream.on('finish', () => resolve(signedPdfPath));
+                stream.on('finish', async () => {
+                    let cdnUrl: string | undefined;
+                    
+                    if (supabaseStorage.isAvailable()) {
+                        try {
+                            const fileBuffer = fs.readFileSync(signedPdfPath);
+                            const storagePath = `signed/${documentId}_signed.pdf`;
+                            
+                            const result = await supabaseStorage.uploadFile(
+                                'pdf-output',
+                                storagePath,
+                                fileBuffer,
+                                'application/pdf'
+                            );
+                            
+                            cdnUrl = result.url;
+                            logger.info({ documentId, url: cdnUrl }, 'Signed PDF uploaded to Supabase');
+                        } catch (supabaseErr) {
+                            logger.warn({ supabaseErr, documentId }, 'Failed to upload signed PDF to Supabase');
+                        }
+                    }
+                    
+                    resolve(signedPdfPath);
+                });
                 stream.on('error', reject);
             });
         } catch (error) {
