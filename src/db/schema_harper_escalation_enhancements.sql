@@ -12,11 +12,11 @@
 
 -- Add intent_clear column if not exists
 -- Flag indicating admin's response was unambiguous and actionable
-ALTER TABLE escalations ADD COLUMN intent_clear BOOLEAN DEFAULT 0;
+ALTER TABLE escalations ADD COLUMN intent_clear BOOLEAN DEFAULT false;
 
 -- Add clarity_score column if not exists
 -- Score (0-100) from LLM analysis of admin response clarity
-ALTER TABLE escalations ADD COLUMN clarity_score INTEGER DEFAULT 0;
+ALTER TABLE escalations ADD COLUMN clarity_score BOOLEAN DEFAULT false;
 
 -- ============================================================================
 -- ESCALATION_ROUND_LOG TABLE ENHANCEMENTS
@@ -24,10 +24,10 @@ ALTER TABLE escalations ADD COLUMN clarity_score INTEGER DEFAULT 0;
 -- ============================================================================
 
 -- Add intent_clear column if not exists
-ALTER TABLE escalation_round_log ADD COLUMN intent_clear BOOLEAN DEFAULT 0;
+ALTER TABLE escalation_round_log ADD COLUMN intent_clear BOOLEAN DEFAULT false;
 
 -- Add clarity_score column if not exists
-ALTER TABLE escalation_round_log ADD COLUMN clarity_score INTEGER DEFAULT 0;
+ALTER TABLE escalation_round_log ADD COLUMN clarity_score BOOLEAN DEFAULT false;
 
 -- Add harper_instruction column if not exists
 -- The specific instruction for origin agent to follow

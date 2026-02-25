@@ -2,7 +2,7 @@
 -- Comprehensive file metadata tracking for enterprise-grade storage
 
 CREATE TABLE IF NOT EXISTS file_storage (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     file_id TEXT UNIQUE NOT NULL,
     school_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
@@ -12,19 +12,19 @@ CREATE TABLE IF NOT EXISTS file_storage (
     size_bytes INTEGER NOT NULL,
     checksum TEXT NOT NULL, -- SHA256 for integrity verification
     storage_path TEXT NOT NULL, -- Physical path or S3 URI
-    is_archived BOOLEAN DEFAULT 0,
-    archived_at DATETIME,
+    is_archived BOOLEAN DEFAULT false,
+    archived_at TIMESTAMP,
     archive_reason TEXT,
-    uploaded_at DATETIME NOT NULL,
-    expires_at DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    uploaded_at TIMESTAMP NOT NULL,
+    expires_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(school_id) REFERENCES schools(id),
     FOREIGN KEY(user_id) REFERENCES users(id)
 );
 
 -- Moderation Logs - Community management
 CREATE TABLE IF NOT EXISTS moderation_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     school_id TEXT NOT NULL,
     message_id TEXT,
     message_author TEXT, -- Phone number of author
@@ -33,77 +33,77 @@ CREATE TABLE IF NOT EXISTS moderation_logs (
     reason TEXT,
     logged_by TEXT,
     moderation_note TEXT,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(school_id) REFERENCES schools(id)
 );
 
 -- Group Agent Context - Per-school community state
 CREATE TABLE IF NOT EXISTS ga_context (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     school_id TEXT UNIQUE NOT NULL,
-    last_pulse_morning DATETIME,
-    last_pulse_afternoon DATETIME,
-    last_pulse_evening DATETIME,
-    member_count INTEGER DEFAULT 0,
-    is_in_emergency_mode BOOLEAN DEFAULT 0,
+    last_pulse_morning TIMESTAMP,
+    last_pulse_afternoon TIMESTAMP,
+    last_pulse_evening TIMESTAMP,
+    member_count BOOLEAN DEFAULT false,
+    is_in_emergency_mode BOOLEAN DEFAULT false,
     emergency_reason TEXT,
-    emergency_started_at DATETIME,
+    emergency_started_at TIMESTAMP,
     active_announcements TEXT, -- JSON array of active announcements
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(school_id) REFERENCES schools(id)
 );
 
 -- Conversation Memory - For multi-turn context
 CREATE TABLE IF NOT EXISTS conversation_memory (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     school_id TEXT NOT NULL,
     agent TEXT NOT NULL, -- 'PA', 'TA', 'SA', 'GA'
     user_phone TEXT NOT NULL,
     user_id TEXT,
     message_role TEXT CHECK(message_role IN ('user', 'assistant')) NOT NULL,
     message_content TEXT NOT NULL,
-    message_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    message_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     context_snapshot TEXT, -- JSON snapshot of context at time of message
     action_performed TEXT,
     action_status TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(school_id) REFERENCES schools(id),
     FOREIGN KEY(user_id) REFERENCES users(id)
 );
 
 -- Agent Memory Snapshots - Periodic summaries for efficiency
 CREATE TABLE IF NOT EXISTS agent_memory_snapshots (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     school_id TEXT NOT NULL,
     agent TEXT NOT NULL,
     user_phone TEXT NOT NULL,
     user_id TEXT,
     summary_content TEXT NOT NULL, -- LLM-generated summary
     message_count_included INTEGER,
-    time_period_start DATETIME,
-    time_period_end DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    time_period_start TIMESTAMP,
+    time_period_end TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(school_id) REFERENCES schools(id),
     FOREIGN KEY(user_id) REFERENCES users(id)
 );
 
 -- Digital Signatures - PDF signing records
 CREATE TABLE IF NOT EXISTS pdf_signatures (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     signature_id TEXT UNIQUE NOT NULL,
     document_id TEXT NOT NULL,
     school_id TEXT NOT NULL,
     signer_name TEXT NOT NULL,
     signer_role TEXT CHECK(signer_role IN ('teacher', 'admin', 'school')) NOT NULL,
     signer_phone TEXT NOT NULL,
-    timestamp DATETIME NOT NULL,
+    timestamp TIMESTAMP NOT NULL,
     document_hash TEXT NOT NULL,
     signature_hash TEXT NOT NULL,
     certificate_thumbprint TEXT,
-    is_valid BOOLEAN DEFAULT 1,
+    is_valid BOOLEAN DEFAULT true,
     revocation_reason TEXT,
-    revoked_at DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    revoked_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(school_id) REFERENCES schools(id)
 );
 

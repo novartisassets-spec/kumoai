@@ -13,11 +13,11 @@ CREATE TABLE IF NOT EXISTS terminal_reports (
     principal_remarks TEXT,
     position TEXT,
     total_students INTEGER,
-    days_present INTEGER DEFAULT 0,
-    days_open INTEGER DEFAULT 0,
+    days_present BOOLEAN DEFAULT false,
+    days_open BOOLEAN DEFAULT false,
     status TEXT DEFAULT 'DRAFT' CHECK(status IN ('DRAFT', 'RELEASED', 'PUBLISHED', 'ARCHIVED')),
-    generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(school_id, student_id, term_id)
 );
 

@@ -9,7 +9,7 @@ ALTER TABLE escalations ADD COLUMN subject TEXT DEFAULT NULL;
 ALTER TABLE escalations ADD COLUMN term_id TEXT DEFAULT NULL;
 ALTER TABLE escalations ADD COLUMN escalation_subtype TEXT DEFAULT NULL;
 ALTER TABLE escalations ADD COLUMN associated_pdf_path TEXT DEFAULT NULL;
-ALTER TABLE escalations ADD COLUMN requires_pdf_review BOOLEAN DEFAULT 0;
+ALTER TABLE escalations ADD COLUMN requires_pdf_review BOOLEAN DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS idx_escalations_class_term 
 ON escalations(school_id, class_level, term_id, escalation_state);

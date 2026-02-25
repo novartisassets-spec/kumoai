@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS escalations (
     -- Pause/Resume tracking (NEW - core to reversibility)
     pause_message_id TEXT NOT NULL,        -- Message ID where escalation paused
     escalation_state TEXT DEFAULT 'PAUSED' CHECK(escalation_state IN ('PAUSED', 'AWAITING_CLARIFICATION', 'APPROVED', 'DENIED', 'RESOLVED', 'FAILED')),
-    round_number INTEGER DEFAULT 1,        -- Multi-turn escalations (1, 2, 3...)
+    round_number BOOLEAN DEFAULT true,        -- Multi-turn escalations (1, 2, 3...)
     awaiting_clarification_from TEXT,      -- 'ADMIN' if waiting for admin response, 'AGENT' if waiting for agent follow-up
     
     -- Why escalation was needed
@@ -37,8 +37,8 @@ CREATE TABLE IF NOT EXISTS escalations (
     status TEXT DEFAULT 'ESCALATED' CHECK(status IN ('ESCALATED', 'IN_AUTHORITY', 'AUTHORITY_RESPONDED', 'RESUMED', 'RESOLVED', 'CLOSED')),
     timestamp BIGINT NOT NULL,
     resumed_at BIGINT,                     -- When original agent resumed
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
     FOREIGN KEY(school_id) REFERENCES schools(id)
 );
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS escalation_round_log (
     
     -- Metadata
     timestamp BIGINT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
     FOREIGN KEY(escalation_id) REFERENCES escalations(id)
 );

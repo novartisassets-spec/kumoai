@@ -7,7 +7,7 @@ ALTER TABLE schools ADD COLUMN subjects_json TEXT DEFAULT '[]';
 
 -- Add class_level and is_core to subjects table
 ALTER TABLE subjects ADD COLUMN class_level TEXT;
-ALTER TABLE subjects ADD COLUMN is_core BOOLEAN DEFAULT 1;
+ALTER TABLE subjects ADD COLUMN is_core BOOLEAN DEFAULT true;
 
 -- Update existing schools with default PRIMARY values based on school_type
 UPDATE schools SET classes_json = '["Primary 1", "Primary 2", "Primary 3", "Primary 4", "Primary 5", "Primary 6"]' 

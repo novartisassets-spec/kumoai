@@ -11,6 +11,7 @@ import crypto from 'crypto';
 import { logger } from '../utils/logger';
 import { FileStorageRepository } from '../db/repositories/file-storage.repo';
 import { supabaseStorage } from './supabase-storage';
+import { ENV } from '../config/env';
 
 export interface StorageConfig {
     type: 'local' | 's3' | 'supabase';
@@ -355,9 +356,10 @@ export function initFileStorage(config: StorageConfig): FileStorageService {
 
 export function getFileStorage(): FileStorageService {
     if (!storageInstance) {
-        // Default to local storage
+        // Default to Supabase storage if available, otherwise local
+        const storageType = ENV.STORAGE_TYPE || (supabaseStorage.isAvailable() ? 'supabase' : 'local');
         storageInstance = new FileStorageService({
-            type: 'local'
+            type: storageType as 'local' | 's3' | 'supabase'
         });
     }
     return storageInstance;

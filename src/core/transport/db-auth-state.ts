@@ -3,6 +3,71 @@ import { logger } from '../../utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as zlib from 'zlib';
+import pg from 'pg';
+
+const { Pool } = pg;
+
+interface SerializedBuffer {
+    type: string;
+    data: number[];
+}
+
+function isSerializedBuffer(obj: any): obj is SerializedBuffer {
+    return obj && obj.type === 'Buffer' && (Array.isArray(obj.data) || typeof obj.data === 'string');
+}
+
+function reviveBuffers(obj: any): any {
+    if (obj === null || obj === undefined) {
+        return obj;
+    }
+    
+    if (isSerializedBuffer(obj)) {
+        if (Array.isArray(obj.data)) {
+            return Buffer.from(obj.data);
+        } else if (typeof obj.data === 'string') {
+            return Buffer.from(obj.data, 'base64');
+        }
+        return Buffer.from(obj.data);
+    }
+    
+    if (Array.isArray(obj)) {
+        return obj.map(item => reviveBuffers(item));
+    }
+    
+    if (typeof obj === 'object') {
+        const result: any = {};
+        for (const key of Object.keys(obj)) {
+            result[key] = reviveBuffers(obj[key]);
+        }
+        return result;
+    }
+    
+    return obj;
+}
+
+function prepareForSerialization(obj: any): any {
+    if (obj === null || obj === undefined) {
+        return obj;
+    }
+    
+    if (Buffer.isBuffer(obj)) {
+        return { type: 'Buffer', data: Array.from(obj) };
+    }
+    
+    if (Array.isArray(obj)) {
+        return obj.map(item => prepareForSerialization(item));
+    }
+    
+    if (typeof obj === 'object') {
+        const result: any = {};
+        for (const key of Object.keys(obj)) {
+            result[key] = prepareForSerialization(obj[key]);
+        }
+        return result;
+    }
+    
+    return obj;
+}
 
 export interface AuthState {
     creds: any;
@@ -38,7 +103,8 @@ export async function useDBAuthState(schoolId: string): Promise<{
             const credsPath = path.join(sessionDir, 'creds.json');
             if (fs.existsSync(credsPath)) {
                 const credsContent = fs.readFileSync(credsPath, 'utf-8');
-                creds = JSON.parse(credsContent);
+                const parsed = JSON.parse(credsContent);
+                creds = reviveBuffers(parsed);
             }
             
             const keysDir = path.join(sessionDir, 'keys');
@@ -48,7 +114,8 @@ export async function useDBAuthState(schoolId: string): Promise<{
                     if (file.endsWith('.json')) {
                         const keyPath = path.join(keysDir, file);
                         const keyContent = fs.readFileSync(keyPath, 'utf-8');
-                        keys[file.replace('.json', '')] = JSON.parse(keyContent);
+                        const parsed = JSON.parse(keyContent);
+                        keys[file.replace('.json', '')] = reviveBuffers(parsed);
                     }
                 }
             }
@@ -68,7 +135,7 @@ export async function useDBAuthState(schoolId: string): Promise<{
             }
             
             const credsPath = path.join(sessionDir, 'creds.json');
-            fs.writeFileSync(credsPath, JSON.stringify(creds, null, 2));
+            fs.writeFileSync(credsPath, JSON.stringify(prepareForSerialization(creds), null, 2));
             
             const keysDir = path.join(sessionDir, 'keys');
             if (!fs.existsSync(keysDir)) {
@@ -77,7 +144,7 @@ export async function useDBAuthState(schoolId: string): Promise<{
             
             for (const [keyName, keyValue] of Object.entries(keys)) {
                 const keyPath = path.join(keysDir, `${keyName}.json`);
-                fs.writeFileSync(keyPath, JSON.stringify(keyValue, null, 2));
+                fs.writeFileSync(keyPath, JSON.stringify(prepareForSerialization(keyValue), null, 2));
             }
         } catch (err) {
             logger.warn({ err, schoolId }, 'Failed to save auth to files');
@@ -85,34 +152,45 @@ export async function useDBAuthState(schoolId: string): Promise<{
     }
     
     async function syncToDB(): Promise<void> {
-        if (!db.isSupabase()) return;
+        if (!db.isSupabase()) {
+            logger.debug({ schoolId }, 'Supabase not configured, skipping DB sync');
+            return;
+        }
         
         try {
             const authData = {
-                creds,
-                keys,
+                creds: prepareForSerialization(creds),
+                keys: prepareForSerialization(keys),
                 sessionDir: sessionDir
             };
             
             const compressed = zlib.deflateSync(JSON.stringify(authData));
+            const authDataBase64 = compressed.toString('base64');
             
-            const { error } = await db.getClient()
-                .from(tableName)
-                .upsert({
-                    school_id: schoolId,
-                    auth_data: compressed.toString('base64'),
-                    last_active_at: new Date().toISOString()
-                }, {
-                    onConflict: 'school_id'
-                });
+            // Use pg pool directly for more reliable connections
+            const pool = new Pool({
+                host: 'aws-1-eu-west-2.pooler.supabase.com',
+                port: 6543,
+                database: 'postgres',
+                user: 'postgres.zmfzigfqvbjsllrklqdy',
+                password: 'kumo090kumo',
+                ssl: { rejectUnauthorized: false },
+                connectionTimeoutMillis: 5000
+            });
             
-            if (error) {
-                logger.warn({ error, schoolId }, 'Failed to sync auth to DB');
-            } else {
-                logger.info({ schoolId }, 'Synced auth to DB');
-            }
-        } catch (err) {
-            logger.warn({ err, schoolId }, 'Failed to sync auth to DB');
+            await pool.query(`
+                INSERT INTO whatsapp_sessions (school_id, auth_data, last_active_at, is_active)
+                VALUES ($1, $2, NOW(), true)
+                ON CONFLICT (school_id) DO UPDATE SET
+                    auth_data = EXCLUDED.auth_data,
+                    last_active_at = EXCLUDED.last_active_at,
+                    is_active = EXCLUDED.is_active
+            `, [schoolId, authDataBase64]);
+            
+            await pool.end();
+            logger.info({ schoolId, dataSize: authDataBase64.length }, 'Synced auth to DB via pg');
+        } catch (err: any) {
+            logger.error({ err: err.message, schoolId }, 'Failed to sync auth to DB');
         }
     }
     
@@ -120,28 +198,40 @@ export async function useDBAuthState(schoolId: string): Promise<{
         if (!db.isSupabase()) return false;
         
         try {
-            const { data, error } = await db.getClient()
-                .from(tableName)
-                .select('auth_data')
-                .eq('school_id', schoolId)
-                .single();
+            // Use pg pool directly
+            const pool = new Pool({
+                host: 'aws-1-eu-west-2.pooler.supabase.com',
+                port: 6543,
+                database: 'postgres',
+                user: 'postgres.zmfzigfqvbjsllrklqdy',
+                password: 'kumo090kumo',
+                ssl: { rejectUnauthorized: false },
+                connectionTimeoutMillis: 5000
+            });
             
-            if (error || !data?.auth_data) {
+            const result = await pool.query(
+                'SELECT auth_data FROM whatsapp_sessions WHERE school_id = $1',
+                [schoolId]
+            );
+            
+            await pool.end();
+            
+            if (result.rows.length === 0 || !result.rows[0].auth_data) {
                 return false;
             }
             
-            const decompressed = zlib.inflateSync(Buffer.from(data.auth_data, 'base64'));
+            const decompressed = zlib.inflateSync(Buffer.from(result.rows[0].auth_data, 'base64'));
             const authData = JSON.parse(decompressed.toString());
             
-            creds = authData.creds || {};
-            keys = authData.keys || {};
+            creds = reviveBuffers(authData.creds) || {};
+            keys = reviveBuffers(authData.keys) || {};
             
             await saveToFiles();
             
             logger.info({ schoolId }, 'Loaded auth from DB and synced to files');
             return true;
-        } catch (err) {
-            logger.warn({ err, schoolId }, 'Failed to load auth from DB, falling back to files');
+        } catch (err: any) {
+            logger.warn({ err: err.message, schoolId }, 'Failed to load auth from DB, falling back to files');
             return false;
         }
     }
@@ -150,6 +240,8 @@ export async function useDBAuthState(schoolId: string): Promise<{
     
     if (!loadedFromDB) {
         await loadFromFiles();
+        // IMPORTANT: After loading from files, immediately sync to DB for persistence
+        await syncToDB();
     }
     
     async function saveCredsInternal(): Promise<void> {

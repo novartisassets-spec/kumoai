@@ -59,6 +59,9 @@ export const ENV = {
     SUPABASE_URL: process.env.SUPABASE_URL || '',
     SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY || '',
+    
+    // --- STORAGE CONFIGURATION ---
+    STORAGE_TYPE: process.env.STORAGE_TYPE || 'supabase', // 'local', 's3', or 'supabase'
 
     // --- ELEVENLABS CONVERSATIONAL AI ---
         ELEVENLABS_API_KEY: process.env.ELEVENLABS_API_KEY || '',

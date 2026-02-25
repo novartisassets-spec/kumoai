@@ -53,7 +53,7 @@ export class FileStorageRepository {
                     metadata.sizeBytes,
                     metadata.checksum,
                     metadata.storagePath,
-                    metadata.isArchived ? 1 : 0,
+                    metadata.isArchived ? true : false,
                     metadata.uploadedAt.toISOString(),
                     metadata.expiresAt ? metadata.expiresAt.toISOString() : null
                 ],
@@ -71,7 +71,7 @@ export class FileStorageRepository {
     static async getFileMetadata(fileId: string): Promise<FileRecord | null> {
         return new Promise<FileRecord | null>((resolve, reject) => {
             const sql = `
-                SELECT * FROM file_storage WHERE file_id = ? AND is_archived = 0
+                SELECT * FROM file_storage WHERE file_id = ? AND is_archived = false
             `;
 
             db.getDB().get(sql, [fileId], (err: any, row: any) => {
@@ -81,7 +81,7 @@ export class FileStorageRepository {
                         ...row,
                         uploadedAt: new Date(row.uploaded_at),
                         expiresAt: row.expires_at ? new Date(row.expires_at) : undefined,
-                        isArchived: row.is_archived === 1
+                        isArchived: row.is_archived === true || row.is_archived === 1
                     });
                 } else {
                     resolve(null);
@@ -95,7 +95,7 @@ export class FileStorageRepository {
      */
     static async listFiles(schoolId: string, userId?: string, fileType?: string): Promise<FileRecord[]> {
         return new Promise<FileRecord[]>((resolve, reject) => {
-            let sql = `SELECT * FROM file_storage WHERE school_id = ? AND is_archived = 0`;
+            let sql = `SELECT * FROM file_storage WHERE school_id = ? AND is_archived = false`;
             const params: any[] = [schoolId];
 
             if (userId) {
@@ -164,7 +164,7 @@ export class FileStorageRepository {
         return new Promise<FileRecord[]>((resolve, reject) => {
             const sql = `
                 SELECT * FROM file_storage 
-                WHERE is_archived = 0 AND expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP
+                WHERE is_archived = false AND expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP
             `;
 
             db.getDB().all(sql, [], (err: any, rows: any[]) => {
@@ -174,7 +174,7 @@ export class FileStorageRepository {
                         ...row,
                         uploadedAt: new Date(row.uploaded_at),
                         expiresAt: row.expires_at ? new Date(row.expires_at) : undefined,
-                        isArchived: row.is_archived === 1
+                        isArchived: row.is_archived === true || row.is_archived === 1
                     }));
                     resolve(records);
                 }
@@ -202,7 +202,7 @@ export class FileStorageRepository {
                     MIN(uploaded_at) as oldest,
                     MAX(uploaded_at) as newest
                 FROM file_storage
-                WHERE school_id = ? AND is_archived = 0
+                WHERE school_id = ? AND is_archived = false
                 GROUP BY file_type
             `;
 

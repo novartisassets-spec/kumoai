@@ -100,18 +100,19 @@ async function main() {
             return dbConnected || sessionExists;
         });
         
-        if (previouslyConnected.length > 0) {
-            console.log(`\n🔄 Auto-reconnecting to ${previouslyConnected.length} previously connected school(s)...`);
-            for (const school of previouslyConnected) {
-                console.log(`   ↻ Attempting reconnect for: ${school.name} (${school.id})`);
-                try {
-                    await whatsappManager.connect(school.id);
-                    console.log(`   ✅ Reconnect initiated for: ${school.name}`);
-                } catch (err: any) {
-                    console.log(`   ❌ Reconnect failed for ${school.name}: ${err.message}`);
-                }
-            }
-        }
+        // TEMP: Disabled auto-reconnect to test login issue
+        // if (previouslyConnected.length > 0) {
+        //     console.log(`\n🔄 Auto-reconnecting to ${previouslyConnected.length} previously connected school(s)...`);
+        //     for (const school of previouslyConnected) {
+        //         console.log(`   ↻ Attempting reconnect for: ${school.name} (${school.id})`);
+        //         try {
+        //             await whatsappManager.connect(school.id);
+        //             console.log(`   ✅ Reconnect initiated for: ${school.name}`);
+        //         } catch (err: any) {
+        //             console.log(`   ❌ Reconnect failed for ${school.name}: ${err.message}`);
+        //         }
+        //     }
+        // }
         
         console.log('\n👉 Backend ready! Each school can connect their own WhatsApp via the frontend.');
         
@@ -183,13 +184,16 @@ async function main() {
         // TEST ENDPOINT: Trigger SA Flow (No Auth - must be before authenticateToken)
         app.post('/api/test/trigger-sa', async (req: Request, res: Response) => {
             try {
-                const { from, body, type = 'text' } = req.body;
+                const { from, body, type = 'text', schoolId, userId } = req.body;
                 
                 if (!from || !body) {
                     return res.status(400).json({ success: false, error: 'Missing from or body' });
                 }
 
-                logger.info({ from, body, type }, '📱 [TEST] Simulating WhatsApp message');
+                const targetSchoolId = schoolId || '3876fd28-bfe7-4450-bc69-bad51d533330';
+                const targetUserId = userId || '8b862509-e8f1-4add-846b-1245c856ec68';
+
+                logger.info({ from, body, type, schoolId: targetSchoolId }, '📱 [TEST] Simulating WhatsApp message');
 
                 // Import and use the dispatcher
                 const { AgentDispatcher } = await import('./core/dispatcher');
@@ -205,12 +209,12 @@ async function main() {
                     timestamp: Date.now(),
                     source: 'user' as const,
                     context: 'SA' as const,
-                    schoolId: '3876fd28-bfe7-4450-bc69-bad51d533330', // testskull
+                    schoolId: targetSchoolId,
                     identity: {
-                        userId: '8b862509-e8f1-4add-846b-1245c856ec68',
+                        userId: targetUserId,
                         phone: from,
                         role: 'admin' as const,
-                        schoolId: '3876fd28-bfe7-4450-bc69-bad51d533330',
+                        schoolId: targetSchoolId,
                         name: 'Admin'
                     }
                 };

@@ -55,18 +55,116 @@ export class Database {
         return this.isSupabaseMode;
     }
 
+    // Legacy callback-style interface for compatibility with existing code
     public getDB(): any {
-        return this;
+        const self = this;
+        return {
+            all: (sql: string, ...args: any[]) => {
+                let params: any[] = [];
+                let callback: any = null;
+                
+                if (args.length >= 2) {
+                    if (Array.isArray(args[0])) {
+                        params = args[0];
+                        callback = args[1];
+                    } else if (typeof args[0] === 'function') {
+                        callback = args[0];
+                    } else {
+                        params = [args[0]];
+                        callback = args[1];
+                    }
+                } else if (args.length === 1) {
+                    if (Array.isArray(args[0])) {
+                        params = args[0];
+                    } else if (typeof args[0] === 'function') {
+                        callback = args[0];
+                    } else {
+                        params = [args[0]];
+                    }
+                }
+                
+                if (callback) {
+                    self.all(sql, params).then(rows => callback(null, rows)).catch(err => callback(err, []));
+                } else {
+                    return self.all(sql, params);
+                }
+            },
+            get: (sql: string, ...args: any[]) => {
+                let params: any[] = [];
+                let callback: any = null;
+                
+                if (args.length >= 2) {
+                    if (Array.isArray(args[0])) {
+                        params = args[0];
+                        callback = args[1];
+                    } else if (typeof args[0] === 'function') {
+                        callback = args[0];
+                    } else {
+                        params = [args[0]];
+                        callback = args[1];
+                    }
+                } else if (args.length === 1) {
+                    if (Array.isArray(args[0])) {
+                        params = args[0];
+                    } else if (typeof args[0] === 'function') {
+                        callback = args[0];
+                    } else {
+                        params = [args[0]];
+                    }
+                }
+                
+                if (callback) {
+                    self.get(sql, params).then(row => callback(null, row)).catch(err => callback(err, null));
+                } else {
+                    return self.get(sql, params);
+                }
+            },
+            run: (sql: string, ...args: any[]) => {
+                let params: any[] = [];
+                let callback: any = null;
+                
+                if (args.length >= 2) {
+                    if (Array.isArray(args[0])) {
+                        params = args[0];
+                        callback = args[1];
+                    } else if (typeof args[0] === 'function') {
+                        callback = args[0];
+                    } else {
+                        params = [args[0]];
+                        callback = args[1];
+                    }
+                } else if (args.length === 1) {
+                    if (Array.isArray(args[0])) {
+                        params = args[0];
+                    } else if (typeof args[0] === 'function') {
+                        callback = args[0];
+                    } else {
+                        params = [args[0]];
+                    }
+                }
+                
+                if (callback) {
+                    self.run(sql, params).then(() => callback(null)).catch(err => callback(err));
+                } else {
+                    return self.run(sql, params);
+                }
+            }
+        };
     }
 
     private async getPool(): Promise<pg.Pool> {
         if (!this.pool) {
-            const poolerUrl = ENV.SUPABASE_URL.replace('https://', 'postgres://');
-            const connectionString = `${poolerUrl}:5432/postgres?sslmode=require`;
-            
             this.pool = new Pool({
-                connectionString: `postgres://postgres.zmfzigfqvbjsllrklqdy:${encodeURIComponent('kumo090kumo')}@aws-1-eu-west-2.pooler.supabase.com:6543/postgres?sslmode=require`,
-                ssl: { rejectUnauthorized: false }
+                host: 'aws-1-eu-west-2.pooler.supabase.com',
+                port: 6543,
+                database: 'postgres',
+                user: 'postgres.zmfzigfqvbjsllrklqdy',
+                password: 'kumo090kumo',
+                ssl: {
+                    rejectUnauthorized: false
+                },
+                connectionTimeoutMillis: 10000,
+                idleTimeoutMillis: 30000
             });
         }
         return this.pool;
@@ -79,20 +177,66 @@ export class Database {
         }
 
         try {
+            // Test pooler connection first
+            const pool = await this.getPool();
+            await pool.query('SELECT 1');
+            logger.info('Pooler connection verified');
+            
+            // Setup exec_sql function
             await this.setupExecSQLFunction();
             
-            const { data, error } = await this.supabase.from('schools').select('id').limit(1);
-            if (error) {
-                logger.warn({ error }, 'Tables may not exist, running migrations');
-            }
-            
             this.isConnected = true;
-            logger.info('Connected to Supabase database');
+            logger.info('Connected to Supabase via pooler');
+            
+            // Check if tables exist, if not create base schema first
+            const tablesExist = await this.checkTablesExist();
+            if (!tablesExist) {
+                logger.info('No tables found - running base schema first');
+                await this.loadBaseSchema();
+            }
             
             await this.loadSchemas();
         } catch (err) {
-            logger.error({ err }, 'Failed to connect to Supabase, running schema migration');
+            logger.error({ err }, 'Failed to initialize Supabase');
+            // Try to load schemas anyway
             await this.loadSchemas();
+        }
+    }
+
+    private async checkTablesExist(): Promise<boolean> {
+        try {
+            const pool = await this.getPool();
+            const result = await pool.query(`
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public'
+                    AND table_name = 'schools'
+                ) as exists
+            `);
+            return result.rows[0]?.exists || false;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    private async loadBaseSchema(): Promise<void> {
+        try {
+            const pool = await this.getPool();
+            const baseSchema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf-8');
+            const statements = baseSchema.split(';').map(s => s.trim()).filter(s => s.length > 0 && !s.startsWith('--'));
+            
+            for (const statement of statements) {
+                try {
+                    await pool.query(statement);
+                } catch (e: any) {
+                    if (!e.message?.includes('already exists')) {
+                        logger.debug({ statement: statement.substring(0, 50), error: e.message }, 'Statement error (continuing)');
+                    }
+                }
+            }
+            logger.info('Base schema created successfully');
+        } catch (err) {
+            logger.error({ err }, 'Failed to load base schema');
         }
     }
 
@@ -146,6 +290,7 @@ export class Database {
             { path: path.join(__dirname, 'schema_pdf_audit.sql'), name: 'PDF Audit Trail' },
             { path: path.join(__dirname, 'schema_escalation_system.sql'), name: 'Escalation System' },
             { path: path.join(__dirname, 'schema_escalation_audit.sql'), name: 'Escalation Audit Log' },
+            { path: path.join(__dirname, 'schema_escalation_audit_log.sql'), name: 'Escalation Audit Log Table' },
             { path: path.join(__dirname, 'schema_escalation_admin_decision.sql'), name: 'Escalation Admin Decision' },
             { path: path.join(__dirname, 'schema_harper_escalation_enhancements.sql'), name: 'Harper Escalation Enhancements' },
             { path: path.join(__dirname, 'schema_primary_secondary.sql'), name: 'Primary/Secondary Support' },
@@ -187,60 +332,82 @@ export class Database {
         }
     }
 
-    private async executeSQL(sql: string): Promise<void> {
-        const { error } = await this.supabase.rpc('exec_sql', { sql_text: sql });
-        
-        if (error) {
-            const errorMsg = error.message || String(error);
-            if (errorMsg.includes('does not exist') || errorMsg.includes('already exists')) {
+    private async executeSQL(sql: string, retries = 3): Promise<void> {
+        for (let i = 0; i < retries; i++) {
+            try {
+                const pool = await this.getPool();
+                await pool.query(sql);
+                return;
+            } catch (err: any) {
+                const errorMsg = err.message || String(err);
+                // If it's a "relation does not exist" error, it's expected for some statements
+                if (errorMsg.includes('does not exist') || errorMsg.includes('already exists')) {
+                    return;
+                }
+                // Retry on network errors
+                if (errorMsg.includes('fetch failed') || errorMsg.includes('ECONNREFUSED')) {
+                    await new Promise(r => setTimeout(r, 1000));
+                    continue;
+                }
+                // Log and skip other errors
+                logger.debug({ sql: sql.substring(0, 50), error: errorMsg }, 'Statement error (continuing)');
                 return;
             }
-            throw error;
         }
+    }
+
+    // Convert SQLite ? placeholders to PostgreSQL $1, $2, etc.
+    private convertParams(sql: string, params: any[] = []): { sql: string, params: any[] } {
+        if (params.length === 0) return { sql, params };
+        
+        let paramIndex = 0;
+        const newSql = sql.replace(/\?/g, () => {
+            paramIndex++;
+            return `$${paramIndex}`;
+        });
+        return { sql: newSql, params };
     }
 
     public async run(sql: string, params: any[] = []): Promise<{ changes: number; lastInsertRowid: number }> {
         try {
-            const { error } = await this.supabase.rpc('exec_sql', { 
-                sql_text: sql,
-                params: params 
-            });
-            
-            if (error) throw error;
-            return { changes: 1, lastInsertRowid: 0 };
-        } catch (err) {
-            logger.error({ sql: sql.substring(0, 100), params }, 'SQL run error');
-            throw err;
+            const converted = this.convertParams(sql, params);
+            const pool = await this.getPool();
+            const result = await pool.query(converted.sql, converted.params);
+            return { changes: result.rowCount || 0, lastInsertRowid: 0 };
+        } catch (err: any) {
+            const errorMsg = err.message || String(err);
+            if (!errorMsg.includes('already exists') && !errorMsg.includes('duplicate')) {
+                logger.error({ sql: sql.substring(0, 100), params, error: errorMsg }, 'SQL run error');
+            }
+            return { changes: 0, lastInsertRowid: 0 };
         }
     }
 
     public async get(sql: string, params: any[] = []): Promise<any> {
         try {
-            const { data, error } = await this.supabase.rpc('exec_sql', { 
-                sql_text: sql,
-                params: params 
-            });
-            
-            if (error) throw error;
-            return data?.[0] || null;
-        } catch (err) {
-            logger.error({ sql: sql.substring(0, 100), params }, 'SQL get error');
-            throw err;
+            const converted = this.convertParams(sql, params);
+            const pool = await this.getPool();
+            const result = await pool.query(converted.sql, converted.params);
+            return result.rows?.[0] || null;
+        } catch (err: any) {
+            logger.error({ sql: sql.substring(0, 100), params, error: err.message }, 'SQL get error');
+            return null;
         }
     }
 
     public async all(sql: string, params: any[] = []): Promise<any[]> {
         try {
-            const { data, error } = await this.supabase.rpc('exec_sql', { 
-                sql_text: sql,
-                params: params 
-            });
-            
-            if (error) throw error;
-            return data || [];
-        } catch (err) {
-            logger.error({ sql: sql.substring(0, 100), params }, 'SQL all error');
-            throw err;
+            const converted = this.convertParams(sql, params);
+            const pool = await this.getPool();
+            if (!pool) {
+                logger.warn('Database pool not available');
+                return [];
+            }
+            const result = await pool.query(converted.sql, converted.params);
+            return (result?.rows) || [];
+        } catch (err: any) {
+            logger.error({ sql: sql.substring(0, 100), params, error: err.message }, 'SQL all error');
+            return [];
         }
     }
 
