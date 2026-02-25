@@ -7,6 +7,24 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
+let sharedPool: pg.Pool | null = null;
+
+function getSharedPool(): pg.Pool {
+    if (!sharedPool) {
+        sharedPool = new Pool({
+            host: 'aws-1-eu-west-2.pooler.supabase.com',
+            port: 6543,
+            database: 'postgres',
+            user: 'postgres.zmfzigfqvbjsllrklqdy',
+            password: 'kumo090kumo',
+            ssl: { rejectUnauthorized: false },
+            connectionTimeoutMillis: 5000,
+            max: 5 // Limit connections
+        });
+    }
+    return sharedPool;
+}
+
 interface SerializedBuffer {
     type: string;
     data: number[];
@@ -167,16 +185,8 @@ export async function useDBAuthState(schoolId: string): Promise<{
             const compressed = zlib.deflateSync(JSON.stringify(authData));
             const authDataBase64 = compressed.toString('base64');
             
-            // Use pg pool directly for more reliable connections
-            const pool = new Pool({
-                host: 'aws-1-eu-west-2.pooler.supabase.com',
-                port: 6543,
-                database: 'postgres',
-                user: 'postgres.zmfzigfqvbjsllrklqdy',
-                password: 'kumo090kumo',
-                ssl: { rejectUnauthorized: false },
-                connectionTimeoutMillis: 5000
-            });
+            // Use shared pg pool
+            const pool = getSharedPool();
             
             await pool.query(`
                 INSERT INTO whatsapp_sessions (school_id, auth_data, last_active_at, is_active)
@@ -187,7 +197,6 @@ export async function useDBAuthState(schoolId: string): Promise<{
                     is_active = EXCLUDED.is_active
             `, [schoolId, authDataBase64]);
             
-            await pool.end();
             logger.info({ schoolId, dataSize: authDataBase64.length }, 'Synced auth to DB via pg');
         } catch (err: any) {
             logger.error({ err: err.message, schoolId }, 'Failed to sync auth to DB');
@@ -198,23 +207,13 @@ export async function useDBAuthState(schoolId: string): Promise<{
         if (!db.isSupabase()) return false;
         
         try {
-            // Use pg pool directly
-            const pool = new Pool({
-                host: 'aws-1-eu-west-2.pooler.supabase.com',
-                port: 6543,
-                database: 'postgres',
-                user: 'postgres.zmfzigfqvbjsllrklqdy',
-                password: 'kumo090kumo',
-                ssl: { rejectUnauthorized: false },
-                connectionTimeoutMillis: 5000
-            });
+            // Use shared pg pool
+            const pool = getSharedPool();
             
             const result = await pool.query(
                 'SELECT auth_data FROM whatsapp_sessions WHERE school_id = $1',
                 [schoolId]
             );
-            
-            await pool.end();
             
             if (result.rows.length === 0 || !result.rows[0].auth_data) {
                 return false;
