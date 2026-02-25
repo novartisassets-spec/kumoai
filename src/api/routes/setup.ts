@@ -18,6 +18,9 @@ interface AuthRequest extends Request {
         schoolId: string;
         schoolName?: string;
     };
+    body: any;
+    query: any;
+    params: any;
 }
 
 function requireSchoolOwnership(req: AuthRequest, res: Response, next: Function) {
