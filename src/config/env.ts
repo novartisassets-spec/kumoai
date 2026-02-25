@@ -55,6 +55,11 @@ export const ENV = {
     GROQ_RETRY_KEY_4: process.env.GROQ_RETRY_KEY_4 || '',
     GROQ_RETRY_KEY_5: process.env.GROQ_RETRY_KEY_5 || '',
 
+    // --- SUPABASE CONFIGURATION ---
+    SUPABASE_URL: process.env.SUPABASE_URL || '',
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY || '',
+
     // --- ELEVENLABS CONVERSATIONAL AI ---
         ELEVENLABS_API_KEY: process.env.ELEVENLABS_API_KEY || '',
         ELEVENLABS_AGENT_ID_PA: process.env.ELEVENLABS_AGENT_ID_PA || '',

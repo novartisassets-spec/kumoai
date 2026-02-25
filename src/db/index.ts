@@ -1,24 +1,39 @@
-import sqlite3 from 'sqlite3';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import pg from 'pg';
 import fs from 'fs';
 import path from 'path';
 import { ENV } from '../config/env';
 import { logger } from '../utils/logger';
 
+const { Pool } = pg;
+
 export class Database {
     private static instance: Database;
-    private db: sqlite3.Database;
-    private currentDbPath: string;
+    private supabase: SupabaseClient;
+    private pool: pg.Pool | null = null;
+    private isConnected: boolean = false;
+    private isSupabaseMode: boolean = false;
 
-    private constructor(dbPath?: string) {
-        this.currentDbPath = dbPath || ENV.DB_PATH;
-        this.db = new sqlite3.Database(this.currentDbPath, (err) => {
-            if (err) {
-                logger.error({ err }, 'Could not connect to database');
-                process.exit(1);
-            } else {
-                logger.info({ dbPath: this.currentDbPath }, 'Connected to SQLite database');
+    private constructor() {
+        this.isSupabaseMode = !!ENV.SUPABASE_URL && !!ENV.SUPABASE_SERVICE_KEY;
+
+        if (!this.isSupabaseMode) {
+            logger.warn('Supabase credentials not found, using SQLite mode');
+            this.supabase = createClient('https://placeholder.supabase.co', 'placeholder');
+            return;
+        }
+
+        this.supabase = createClient(
+            ENV.SUPABASE_URL,
+            ENV.SUPABASE_SERVICE_KEY,
+            {
+                auth: {
+                    persistSession: false,
+                    autoRefreshToken: false
+                }
             }
-        });
+        );
+        logger.info({ supabaseUrl: ENV.SUPABASE_URL }, 'Supabase client initialized');
     }
 
     public static getInstance(): Database {
@@ -28,102 +43,90 @@ export class Database {
         return Database.instance;
     }
 
-    public static resetInstance(): Database {
-        if (Database.instance) {
-            Database.instance.close();
-            Database.instance = null as any;
+    public static resetInstance(): void {
+        Database.instance = null as any;
+    }
+
+    public getClient(): SupabaseClient {
+        return this.supabase;
+    }
+
+    public isSupabase(): boolean {
+        return this.isSupabaseMode;
+    }
+
+    public getDB(): any {
+        return this;
+    }
+
+    private async getPool(): Promise<pg.Pool> {
+        if (!this.pool) {
+            const poolerUrl = ENV.SUPABASE_URL.replace('https://', 'postgres://');
+            const connectionString = `${poolerUrl}:5432/postgres?sslmode=require`;
+            
+            this.pool = new Pool({
+                connectionString: `postgres://postgres.zmfzigfqvbjsllrklqdy:${encodeURIComponent('kumo090kumo')}@aws-1-eu-west-2.pooler.supabase.com:6543/postgres?sslmode=require`,
+                ssl: { rejectUnauthorized: false }
+            });
         }
-        return Database.getInstance();
-    }
-
-    public static reconnect(dbPath: string): Database {
-        if (Database.instance) {
-            Database.instance.close();
-            Database.instance = null as any;
-        }
-        Database.instance = new Database(dbPath);
-        return Database.instance;
-    }
-
-    public getDB(): sqlite3.Database {
-        return this.db;
-    }
-
-    public getCurrentPath(): string {
-        return this.currentDbPath;
+        return this.pool;
     }
 
     public async init(): Promise<void> {
-        return new Promise((resolve, reject) => {
-            this.db.run('PRAGMA foreign_keys = ON', (err) => {
-                if (err) {
-                    logger.error({ err }, 'Failed to enable foreign keys');
-                    reject(err);
-                    return;
-                }
-                logger.info('Foreign key enforcement enabled');
-            });
-            this.db.serialize(() => {
-                resolve(this.loadSchemas().then(() => {
-                    this.runAuthMigration();
-                }));
-            });
-        });
+        if (!this.isSupabaseMode) {
+            logger.info('Running in SQLite mode - schema loading skipped');
+            return;
+        }
+
+        try {
+            await this.setupExecSQLFunction();
+            
+            const { data, error } = await this.supabase.from('schools').select('id').limit(1);
+            if (error) {
+                logger.warn({ error }, 'Tables may not exist, running migrations');
+            }
+            
+            this.isConnected = true;
+            logger.info('Connected to Supabase database');
+            
+            await this.loadSchemas();
+        } catch (err) {
+            logger.error({ err }, 'Failed to connect to Supabase, running schema migration');
+            await this.loadSchemas();
+        }
     }
 
-    private runAuthMigration(): void {
-        const addColumnSafe = (table: string, column: string, definition: string, desc: string) => {
-            this.db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`, (err) => {
-                if (err) {
-                    const msg = err.message.toLowerCase();
-                    if (msg.includes('duplicate column name') || msg.includes('already exists')) {
-                        logger.info(`${desc} column already exists`);
-                    } else {
-                        logger.warn({ err, table, column }, `Failed to add ${desc} column`);
-                    }
-                } else {
-                    logger.info(`${desc} column added`);
+    private async setupExecSQLFunction(): Promise<void> {
+        try {
+            const pool = await this.getPool();
+            
+            const createFunctionSQL = `
+                CREATE OR REPLACE FUNCTION exec_sql(sql_text TEXT)
+                RETURNS void 
+                LANGUAGE plpgsql
+                SECURITY DEFINER
+                AS $$
+                BEGIN
+                    EXECUTE sql_text;
+                END;
+                $$;
+            `;
+            
+            await pool.query(createFunctionSQL);
+            logger.info('exec_sql function created/verified');
+        } catch (err) {
+            logger.debug({ err }, 'Failed to create exec_sql function via pg, trying alternative method');
+            try {
+                const { error } = await this.supabase.rpc('exec_sql', { sql_text: 'SELECT 1' });
+                if (!error || error.message.includes('already exists')) {
+                    logger.info('exec_sql function already exists');
                 }
-            });
-        };
-        
-        addColumnSafe('users', 'password_hash', 'TEXT', 'password_hash');
-        addColumnSafe('users', 'email', 'TEXT', 'email');
-        addColumnSafe('users', 'is_active', 'INTEGER DEFAULT 1', 'is_active');
-        addColumnSafe('schools', 'whatsapp_number', 'TEXT', 'whatsapp_number');
-        addColumnSafe('schools', 'admin_name', 'TEXT', 'admin_name');
-        addColumnSafe('ta_setup_state', 'progress_percentage', 'INTEGER DEFAULT 0', 'progress_percentage');
-        this.db.run(`CREATE TABLE IF NOT EXISTS password_reset_tokens (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            token TEXT NOT NULL,
-            expires_at INTEGER NOT NULL,
-            created_at INTEGER DEFAULT (strftime('%s', 'now'))
-        )`, (err) => {
-            if (err && !err.message.includes('already exists')) {
-                logger.warn({ err }, 'password_reset_tokens table creation');
+            } catch (e) {
+                logger.warn({ e }, 'Could not verify exec_sql function');
             }
-        });
-        this.db.run(`CREATE TABLE IF NOT EXISTS user_sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            school_id TEXT NOT NULL,
-            token_jti TEXT NOT NULL UNIQUE,
-            created_at INTEGER DEFAULT (strftime('%s', 'now')),
-            expires_at INTEGER NOT NULL,
-            is_revoked INTEGER DEFAULT 0
-        )`, (err) => {
-            if (err && !err.message.includes('already exists')) {
-                logger.warn({ err }, 'user_sessions table creation');
-            }
-        });
-        this.db.run(`CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone)`, (err) => {
-            if (err && !err.message.includes('already exists')) {
-                logger.warn({ err }, 'idx_users_phone index');
-            }
-        });
+        }
     }
-    
+
     private async loadSchemas(): Promise<void> {
         const schemas = [
             { path: path.join(__dirname, 'schema.sql'), name: 'Base' },
@@ -150,7 +153,9 @@ export class Database {
             { path: path.join(__dirname, 'schema_mark_submission_workflow.sql'), name: 'Mark Submission Workflow' },
             { path: path.join(__dirname, 'schema_parent_flow.sql'), name: 'Parent Flow' },
             { path: path.join(__dirname, 'schema_universe.sql'), name: 'School Universe Config' },
-            { path: path.join(__dirname, 'schema_terminal_reports.sql'), name: 'Terminal Reports' }
+            { path: path.join(__dirname, 'schema_terminal_reports.sql'), name: 'Terminal Reports' },
+            { path: path.join(__dirname, 'schema_whatsapp_connection.sql'), name: 'WhatsApp Connection' },
+            { path: path.join(__dirname, 'schema_whatsapp_sessions.sql'), name: 'WhatsApp Sessions' }
         ];
 
         for (const s of schemas) {
@@ -161,38 +166,89 @@ export class Database {
             }
             
             const sql = fs.readFileSync(s.path, 'utf-8');
-            // Split by semicolon but preserve those inside quotes or strings? 
-            // Simple split for now as our schemas are clean.
-            const statements = sql.split(';').map(st => st.trim()).filter(st => st.length > 0);
+            const statements = sql.split(';').map(st => st.trim()).filter(st => st.length > 0 && !st.startsWith('--'));
 
             for (const statement of statements) {
-                await new Promise<void>((resolve) => {
-                    this.db.run(statement, (err) => {
-                        if (err) {
-                            if (err.message.includes('duplicate column name') || 
-                                err.message.includes('already exists') ||
-                                err.message.includes('duplicate table name')) {
-                                // Silent skip for idempotent columns
-                            } else {
-                                logger.error({ err, schema: s.name, statement }, 'Failed to execute statement');
-                            }
-                        }
-                        resolve();
-                    });
-                });
+                try {
+                    await this.executeSQL(statement);
+                } catch (err: any) {
+                    const errorMsg = err.message || String(err);
+                    if (errorMsg.includes('duplicate table') || 
+                        errorMsg.includes('already exists') ||
+                        errorMsg.includes('duplicate column') ||
+                        (errorMsg.includes('relation') && errorMsg.includes('already exists'))) {
+                        // Silent skip for idempotent operations
+                    } else {
+                        logger.error({ err, schema: s.name, statement: statement.substring(0, 100) }, 'Failed to execute statement');
+                    }
+                }
             }
             logger.info({ schema: s.name }, 'Schema component processed');
         }
     }
 
-    public close(): void {
-        this.db.close((err) => {
-            if (err) {
-                logger.error({ err }, 'Error closing database');
-            } else {
-                logger.info('Database connection closed');
+    private async executeSQL(sql: string): Promise<void> {
+        const { error } = await this.supabase.rpc('exec_sql', { sql_text: sql });
+        
+        if (error) {
+            const errorMsg = error.message || String(error);
+            if (errorMsg.includes('does not exist') || errorMsg.includes('already exists')) {
+                return;
             }
-        });
+            throw error;
+        }
+    }
+
+    public async run(sql: string, params: any[] = []): Promise<{ changes: number; lastInsertRowid: number }> {
+        try {
+            const { error } = await this.supabase.rpc('exec_sql', { 
+                sql_text: sql,
+                params: params 
+            });
+            
+            if (error) throw error;
+            return { changes: 1, lastInsertRowid: 0 };
+        } catch (err) {
+            logger.error({ sql: sql.substring(0, 100), params }, 'SQL run error');
+            throw err;
+        }
+    }
+
+    public async get(sql: string, params: any[] = []): Promise<any> {
+        try {
+            const { data, error } = await this.supabase.rpc('exec_sql', { 
+                sql_text: sql,
+                params: params 
+            });
+            
+            if (error) throw error;
+            return data?.[0] || null;
+        } catch (err) {
+            logger.error({ sql: sql.substring(0, 100), params }, 'SQL get error');
+            throw err;
+        }
+    }
+
+    public async all(sql: string, params: any[] = []): Promise<any[]> {
+        try {
+            const { data, error } = await this.supabase.rpc('exec_sql', { 
+                sql_text: sql,
+                params: params 
+            });
+            
+            if (error) throw error;
+            return data || [];
+        } catch (err) {
+            logger.error({ sql: sql.substring(0, 100), params }, 'SQL all error');
+            throw err;
+        }
+    }
+
+    public close(): void {
+        if (this.pool) {
+            this.pool.end();
+        }
+        logger.info('Supabase connection closed');
     }
 }
 

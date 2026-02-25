@@ -21,6 +21,7 @@ import { writeFile } from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
 import pino from 'pino';
 import { messenger, OutboundMessage } from '../../services/messenger';
+import { useDBAuthState } from './db-auth-state';
 
 export class WhatsAppTransport {
     private sock: WASocket | undefined;
@@ -129,7 +130,15 @@ export class WhatsAppTransport {
         }
         this.sessionDir = sessionDir;
 
-        const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+        // Use DB auth state when Supabase is available, otherwise fall back to file-based
+        let authState;
+        if (db.isSupabase()) {
+            const schoolId = 'default'; // Single school mode
+            authState = await useDBAuthState(schoolId);
+        } else {
+            authState = await useMultiFileAuthState(sessionDir);
+        }
+        const { state, saveCreds } = authState;
         const { version, isLatest } = await fetchLatestBaileysVersion();
         
         logger.info({ version, isLatest }, 'Starting WhatsApp Transport');

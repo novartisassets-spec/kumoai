@@ -27,6 +27,7 @@ import { v4 as uuidv4 } from 'uuid';
 import pino from 'pino';
 import { messenger, OutboundMessage } from '../../services/messenger';
 import EventEmitter from 'events';
+import { useDBAuthState, deleteDBSession } from './db-auth-state';
 
 export interface QRCodeData {
     schoolId: string;
@@ -462,7 +463,14 @@ export class WhatsAppTransportManager extends EventEmitter {
      * This is the core function that creates the socket and handles events
      */
     private async createSocket(schoolId: string, school: any, sessionDir: string, phoneNumber: string | null): Promise<void> {
-        const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+        // Use DB auth state when Supabase is available, otherwise fall back to file-based
+        let authState;
+        if (db.isSupabase()) {
+            authState = await useDBAuthState(schoolId);
+        } else {
+            authState = await useMultiFileAuthState(sessionDir);
+        }
+        const { state, saveCreds } = authState;
         const { version, isLatest } = await fetchLatestBaileysVersion();
         
         console.log(`[WhatsApp] 📦 Baileys version: ${version.join('.')}, isLatest: ${isLatest}`);
@@ -1106,6 +1114,11 @@ export class WhatsAppTransportManager extends EventEmitter {
      * Clear session directory for a school
      */
     private async clearSessionDir(schoolId: string): Promise<void> {
+        // Clear DB session if using Supabase
+        if (db.isSupabase()) {
+            await deleteDBSession(schoolId);
+        }
+        
         const sessionDir = this.getSessionDir(schoolId);
         if (fs.existsSync(sessionDir)) {
             try {

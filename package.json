@@ -27,6 +27,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@hapi/boom": "^10.0.1",
+    "@supabase/supabase-js": "^2.97.0",
     "@types/pdfkit": "^0.17.4",
     "axios": "^1.13.2",
     "baileys": "^7.0.0-rc.9",
@@ -38,6 +39,7 @@
     "groq-sdk": "^0.37.0",
     "jsonwebtoken": "^9.0.3",
     "pdfkit": "^0.17.2",
+    "pg": "^8.18.0",
     "pino": "^10.1.0",
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
@@ -52,6 +54,7 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.0.3",
+    "@types/pg": "^8.16.0",
     "@types/pino": "^7.0.4",
     "@types/qrcode": "^1.5.6",
     "@types/qrcode-terminal": "^0.12.2",
