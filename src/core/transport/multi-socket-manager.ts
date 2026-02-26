@@ -397,50 +397,10 @@ export class WhatsAppTransportManager extends EventEmitter {
 
     /**
      * Check if session is valid (user has completed pairing)
-     * Priority: 1) Database (persistent), 2) Filesystem
+     * Priority: Filesystem only (let Baileys handle the session)
      */
     private async isSessionValid(schoolId: string): Promise<boolean> {
-        // FIRST: Check database for persistent session
-        try {
-            const dbSession = await whatsappSessionService.loadSession(schoolId);
-            if (dbSession && dbSession.creds && dbSession.creds.registered === true) {
-                console.log(`[WhatsApp] 📂 Found valid session in database for ${schoolId}`);
-                
-                // Restore session to filesystem for Baileys
-                const sessionDir = this.getSessionDir(schoolId);
-                
-                // Ensure directory exists
-                if (!fs.existsSync(sessionDir)) {
-                    fs.mkdirSync(sessionDir, { recursive: true });
-                }
-                
-                // Revive Buffer objects before writing to file
-                const revivedSession = reviveBuffers(dbSession);
-                
-                // Write creds to file
-                const credsPath = path.join(sessionDir, 'creds.json');
-                fs.writeFileSync(credsPath, JSON.stringify(revivedSession.creds));
-                
-                // Also restore keys if available
-                if (revivedSession.keys) {
-                    const keysDir = path.join(sessionDir, 'keys');
-                    if (!fs.existsSync(keysDir)) {
-                        fs.mkdirSync(keysDir, { recursive: true });
-                    }
-                    for (const [keyName, keyValue] of Object.entries(revivedSession.keys)) {
-                        const keyPath = path.join(keysDir, `${keyName}.json`);
-                        fs.writeFileSync(keyPath, JSON.stringify(reviveBuffers(keyValue)));
-                    }
-                }
-                
-                console.log(`[WhatsApp] ✅ Session restored from database to filesystem`);
-                return true;
-            }
-        } catch (err) {
-            console.log(`[WhatsApp] ⚠️ Database session check failed:`, err);
-        }
-        
-        // SECOND: Fallback to filesystem check
+        // Check filesystem for valid session
         const sessionDir = this.getSessionDir(schoolId);
         const credsPath = path.join(sessionDir, 'creds.json');
         
@@ -449,14 +409,9 @@ export class WhatsAppTransportManager extends EventEmitter {
         }
         
         try {
-            const credsData = fs.readFileSync(credsPath, 'utf-8');
-            const creds = JSON.parse(credsData);
-            // Need to revive Buffers in the loaded creds
-            const revivedCreds = reviveBuffers(creds);
-            // Write back with revived Buffers
-            fs.writeFileSync(credsPath, JSON.stringify(revivedCreds));
+            const creds = JSON.parse(fs.readFileSync(credsPath, 'utf-8'));
             // Session is valid only if user has completed pairing (registered: true)
-            return revivedCreds.registered === true;
+            return creds.registered === true;
         } catch (e) {
             return false;
         }
@@ -543,80 +498,19 @@ export class WhatsAppTransportManager extends EventEmitter {
 
     /**
      * Create WhatsApp socket with the given session
-     * Simple approach: Files primary, DB backup
+     * Simple approach: Files only, let Baileys handle everything
      */
     private async createSocket(schoolId: string, school: any, sessionDir: string, phoneNumber: string | null): Promise<void> {
-        // Use file-based auth as primary (same as old working code)
-        let { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-        
-        // Revive Buffer objects in creds after loading from file
-        if (state.creds) {
-            state.creds = reviveBuffers(state.creds);
-        }
-        
-        // Try to restore from DB if files don't have valid session
-        if (!state.creds?.registered) {
-            try {
-                const dbSession = await whatsappSessionService.loadSession(schoolId);
-                if (dbSession && dbSession.creds?.registered) {
-                    console.log(`[WhatsApp] 🔄 Restoring session from database...`);
-                    // Revive Buffer objects that were serialized to JSON
-                    const revivedSession = reviveBuffers(dbSession);
-                    
-                    // Directly patch the state with revived creds
-                    if (revivedSession.creds) {
-                        state.creds = revivedSession.creds;
-                    }
-                    
-                    // Also restore keys if available
-                    if (revivedSession.keys) {
-                        const keysDir = path.join(sessionDir, 'keys');
-                        if (!fs.existsSync(keysDir)) {
-                            fs.mkdirSync(keysDir, { recursive: true });
-                        }
-                        for (const [keyName, keyValue] of Object.entries(revivedSession.keys)) {
-                            const keyPath = path.join(keysDir, `${keyName}.json`);
-                            fs.writeFileSync(keyPath, JSON.stringify(reviveBuffers(keyValue)));
-                        }
-                    }
-                    
-                    // Reload keys from the files we just wrote
-                    const { state: restoredState } = await useMultiFileAuthState(sessionDir);
-                    state.keys = restoredState.keys;
-                    
-                    console.log(`[WhatsApp] ✅ Session restored from database`);
-                }
-            } catch (e) {
-                console.log(`[WhatsApp] ⚠️ DB restore skipped:`, e.message);
-            }
-        }
+        // Use file-based auth (Baileys handles everything)
+        const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
         
         // Wrap saveCreds to also backup to database
         const originalSaveCreds = saveCreds;
         const wrappedSaveCreds = async () => {
             await originalSaveCreds();
-            // Backup to database
+            // Backup to database - simple approach
             try {
-                const sessionToSave: any = { creds: state.creds, keys: {} };
-                // Get keys from the state.keys store
-                const keyStore = state.keys as any;
-                if (keyStore?.map) {
-                    const keyTypes = ['pre-key', 'session', 'sender-key', 'sender_key_message'];
-                    for (const keyType of keyTypes) {
-                        try {
-                            const keys = await keyStore.map(keyType);
-                            if (keys && keys.size > 0) {
-                                sessionToSave.keys[keyType] = {};
-                                for (const [keyId, keyData] of keys.entries()) {
-                                    sessionToSave.keys[keyType][keyId] = keyData;
-                                }
-                            }
-                        } catch (e) {
-                            // Key type may not exist
-                        }
-                    }
-                }
-                await whatsappSessionService.saveSession(schoolId, sessionToSave);
+                await whatsappSessionService.saveSession(schoolId, { creds: state.creds });
             } catch (e) {
                 console.log(`[WhatsApp] ⚠️ DB backup failed:`, e.message);
             }
@@ -629,17 +523,12 @@ export class WhatsAppTransportManager extends EventEmitter {
         // Browser config - required for pairing to work
         const browserConfig: [string, string, string] = ['Ubuntu', 'Chrome', '110.0.5563.147'];
         
+        // Simple socket options - minimal to debug the connection issue
         const sock = makeWASocket({
             version,
             logger: pino({ level: 'silent' }) as any,
-            auth: {
-                creds: state.creds,
-                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }) as any),
-            },
-            generateHighQualityLinkPreview: true,
-            keepAliveIntervalMs: 30000,
+            auth: state,
             browser: browserConfig,
-            printQRInTerminal: !phoneNumber, // Only print QR in QR mode
         });
         
         this.sockets.set(schoolId, sock);
