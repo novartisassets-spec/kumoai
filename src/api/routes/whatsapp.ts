@@ -407,6 +407,35 @@ router.post('/reconnect/:schoolId', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/whatsapp/clear-session/:schoolId
+ * Clear session and reset for fresh start
+ */
+router.post('/clear-session/:schoolId', async (req: Request, res: Response) => {
+    try {
+        const schoolId = req.params.schoolId as string;
+
+        await whatsappManager.clearSession(schoolId);
+
+        // Update status
+        await new Promise<void>((resolve) => {
+            db.getDB().run(
+                `UPDATE schools SET whatsapp_connection_status = 'disconnected' WHERE id = ?`,
+                [schoolId],
+                () => resolve()
+            );
+        });
+
+        res.json({
+            success: true,
+            message: 'Session cleared. You can now connect with fresh authentication.'
+        });
+    } catch (error: any) {
+        logger.error({ error }, 'Failed to clear session');
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
  * GET /api/whatsapp/pairing-code-status/:schoolId
  * Check pairing code status (expiration, time remaining)
  */

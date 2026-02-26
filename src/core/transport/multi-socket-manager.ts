@@ -1255,7 +1255,7 @@ export class WhatsAppTransportManager extends EventEmitter {
 
     /**
      * Clear session directory for a school
-      */
+       */
     private async clearSessionDir(schoolId: string): Promise<void> {
         // Clear DB session 
         await whatsappSessionService.deleteSession(schoolId);
@@ -1277,6 +1277,25 @@ export class WhatsAppTransportManager extends EventEmitter {
                 logger.warn({ err, schoolId }, 'Failed to clear session directory');
             }
         }
+    }
+
+    /**
+     * Clear session and reset - for fresh start
+     */
+    public async clearSession(schoolId: string): Promise<void> {
+        // Disconnect if connected
+        await this.disconnect(schoolId);
+        
+        // Clear session files and DB
+        await this.clearSessionDir(schoolId);
+        
+        // Clear pairing code cache
+        this.pairingCodeCache.delete(schoolId);
+        
+        // Reset QR count
+        await this.resetQRCount(schoolId);
+        
+        console.log(`[WhatsApp] 🧹 Session cleared for ${schoolId}`);
     }
 
     /**
