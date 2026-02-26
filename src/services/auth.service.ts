@@ -244,6 +244,8 @@ export async function login(credentials: LoginCredentials): Promise<{ user: User
 export async function signup(data: SignupData): Promise<{ user: UserPayload; tokens: AuthTokens }> {
     const { schoolName, adminPhone, email, password, schoolType, address } = data;
 
+    console.log('[SIGNUP] Starting signup for:', adminPhone);
+
     // Check if phone already exists
     const existingUser: any = await new Promise((resolve) => {
         db.getDB().get(
@@ -260,6 +262,7 @@ export async function signup(data: SignupData): Promise<{ user: UserPayload; tok
     // Create school
     const schoolId = uuidv4();
     const schoolTypeValue = schoolType || 'SECONDARY';
+    console.log('[SIGNUP] Creating school:', schoolId);
     await new Promise<void>((resolve, reject) => {
         db.getDB().run(
             `INSERT INTO schools (id, name, admin_phone, school_type, config_json, setup_status)
@@ -273,8 +276,14 @@ export async function signup(data: SignupData): Promise<{ user: UserPayload; tok
                 'PENDING_SETUP'
             ],
             (err) => {
-                if (err) reject(err);
-                else resolve();
+                if (err) {
+                    console.log('[SIGNUP] School insert error:', err);
+                    reject(err);
+                }
+                else {
+                    console.log('[SIGNUP] School created successfully');
+                    resolve();
+                }
             }
         );
     });
@@ -282,6 +291,7 @@ export async function signup(data: SignupData): Promise<{ user: UserPayload; tok
     // Create admin user
     const userId = uuidv4();
     const passwordHash = await hashPassword(password);
+    console.log('[SIGNUP] Creating user:', userId, 'for school:', schoolId);
 
     await new Promise<void>((resolve, reject) => {
         db.getDB().run(
@@ -289,8 +299,14 @@ export async function signup(data: SignupData): Promise<{ user: UserPayload; tok
              VALUES (?, ?, 'admin', ?, ?, ?, ?, 1)`,
             [userId, adminPhone, 'System Admin', schoolId, passwordHash, email || null],
             (err) => {
-                if (err) reject(err);
-                else resolve();
+                if (err) {
+                    console.log('[SIGNUP] User insert error:', err);
+                    reject(err);
+                }
+                else {
+                    console.log('[SIGNUP] User created successfully');
+                    resolve();
+                }
             }
         );
     });
