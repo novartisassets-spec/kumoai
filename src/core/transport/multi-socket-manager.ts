@@ -518,16 +518,41 @@ export class WhatsAppTransportManager extends EventEmitter {
         // If we have a valid DB session, restore it
         if (dbSession && dbSession.creds?.registered) {
             try {
-                console.log(`[WhatsApp] 🔄 Restoring session from database...`);
-                // Write creds to file
-                const credsPath = path.join(sessionDir, 'creds.json');
-                fs.writeFileSync(credsPath, JSON.stringify(dbSession.creds));
+                // Validate that creds are in correct format (not corrupted)
+                const creds = dbSession.creds;
+                let isValid = true;
                 
-                // Also update the state object directly
-                state.creds = dbSession.creds;
-                console.log(`[WhatsApp] ✅ Session restored from database`);
+                // Check for common corruption patterns
+                if (creds.me && typeof creds.me !== 'object') isValid = false;
+                if (creds.serverToken && typeof creds.serverToken !== 'string') isValid = false;
+                
+                if (!isValid) {
+                    console.log(`[WhatsApp] ⚠️ Session credentials appear corrupted, clearing...`);
+                    await whatsappSessionService.deleteSession(schoolId);
+                    dbSession = null;
+                } else {
+                    console.log(`[WhatsApp] 🔄 Restoring session from database...`);
+                    
+                    // Try to write to file first
+                    try {
+                        const credsPath = path.join(sessionDir, 'creds.json');
+                        fs.writeFileSync(credsPath, JSON.stringify(dbSession.creds));
+                    } catch (e) {
+                        console.log(`[WhatsApp] ⚠️ Could not write creds to file:`, e.message);
+                    }
+                    
+                    // Also update the state object directly - this is the key!
+                    if (dbSession.creds) {
+                        Object.assign(state.creds, dbSession.creds);
+                    }
+                    console.log(`[WhatsApp] ✅ Session restored from database`);
+                }
             } catch (e) {
                 console.log(`[WhatsApp] ⚠️ DB restore failed:`, e.message);
+                // Delete corrupted session
+                try {
+                    await whatsappSessionService.deleteSession(schoolId);
+                } catch {}
             }
         } else {
             console.log(`[WhatsApp] 📁 No existing session found, need to scan QR code`);
