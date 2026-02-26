@@ -385,11 +385,14 @@ export class Database {
     public async run(sql: string, params: any[] = []): Promise<{ changes: number; lastInsertRowid: number }> {
         try {
             const converted = this.convertParams(sql, params);
+            console.log('[DB] Running SQL:', sql.substring(0, 50), 'params:', params, 'converted:', converted.params);
             const pool = await this.getPool();
             const result = await pool.query(converted.sql, converted.params);
+            console.log('[DB] Result:', result.rowCount);
             return { changes: result.rowCount || 0, lastInsertRowid: 0 };
         } catch (err: any) {
             const errorMsg = err.message || String(err);
+            console.log('[DB] ERROR:', errorMsg);
             // Only silently ignore "already exists" and "duplicate" errors
             if (!errorMsg.includes('already exists') && !errorMsg.includes('duplicate')) {
                 logger.error({ sql: sql.substring(0, 100), params, error: errorMsg }, 'SQL run error');
