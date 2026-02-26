@@ -3,7 +3,7 @@ main = "worker.ts"
 compatibility_date = "2024-01-01"
 
 [triggers]
-crons = ["*/30 * * * *"]
+crons = ["*/10 * * * *"]
 
 [env.production]
 name = "kumo-pinger"

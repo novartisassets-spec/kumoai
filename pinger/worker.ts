@@ -27,7 +27,14 @@ function getRandomItem(arr: string[]): string {
 }
 
 function getRandomDelay(): number {
-  return Math.floor(Math.random() * 15 * 60 * 1000) + (1 * 60 * 1000);
+  // Random delay between 5-20 minutes to keep Render awake (it sleeps after 15 min)
+  // Varies each time to avoid detection
+  return Math.floor(Math.random() * 15 * 60 * 1000) + (5 * 60 * 1000);
+}
+
+function shouldSkipPing(): boolean {
+  // 20% chance to skip any ping - makes it look more random/organic
+  return Math.random() < 0.2;
 }
 
 function isNightTime(): boolean {
@@ -60,6 +67,12 @@ export default {
   async scheduled(event: any, env: any, ctx: any): Promise<void> {
     if (isNightTime()) {
       console.log('Night time - skipping ping');
+      return;
+    }
+    
+    // 20% chance to skip - makes it look more organic
+    if (shouldSkipPing()) {
+      console.log('Skipped ping (random organic behavior)');
       return;
     }
     
