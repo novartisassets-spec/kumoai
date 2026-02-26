@@ -390,8 +390,11 @@ export class Database {
             return { changes: result.rowCount || 0, lastInsertRowid: 0 };
         } catch (err: any) {
             const errorMsg = err.message || String(err);
+            // Only silently ignore "already exists" and "duplicate" errors
             if (!errorMsg.includes('already exists') && !errorMsg.includes('duplicate')) {
                 logger.error({ sql: sql.substring(0, 100), params, error: errorMsg }, 'SQL run error');
+                // Re-throw the error so the caller knows it failed
+                throw err;
             }
             return { changes: 0, lastInsertRowid: 0 };
         }
