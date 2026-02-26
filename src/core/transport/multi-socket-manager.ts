@@ -504,6 +504,22 @@ export class WhatsAppTransportManager extends EventEmitter {
         // Use file-based auth (Baileys handles everything)
         const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
         
+        // Try to restore from DB if files are empty/not valid
+        if (!state.creds?.registered) {
+            try {
+                const dbSession = await whatsappSessionService.loadSession(schoolId);
+                if (dbSession && dbSession.creds?.registered) {
+                    console.log(`[WhatsApp] 🔄 Restoring session from database...`);
+                    // Write creds to files
+                    const credsPath = path.join(sessionDir, 'creds.json');
+                    fs.writeFileSync(credsPath, JSON.stringify(dbSession.creds));
+                    console.log(`[WhatsApp] ✅ Session restored from database`);
+                }
+            } catch (e) {
+                console.log(`[WhatsApp] ⚠️ DB restore skipped:`, e.message);
+            }
+        }
+        
         // Wrap saveCreds to also backup to database
         const originalSaveCreds = saveCreds;
         const wrappedSaveCreds = async () => {
