@@ -18,7 +18,7 @@ export class WhatsAppSessionService {
                     `INSERT INTO whatsapp_sessions (school_id, auth_data, last_active_at, is_active)
                      VALUES ($1, $2, NOW(), true)
                      ON CONFLICT(school_id) DO UPDATE SET
-                     auth_data = $2, last_active_at = NOW(), is_active = true`,
+                     auth_data = $2, last_active_at = NOW(), is_active = 1`,
                     [schoolId, sessionStr]
                 );
             } else {
@@ -78,7 +78,7 @@ export class WhatsAppSessionService {
     async sessionExists(schoolId: string): Promise<boolean> {
         try {
             const row = await db.get(
-                'SELECT school_id FROM whatsapp_sessions WHERE school_id = ? AND is_active = true',
+                'SELECT school_id FROM whatsapp_sessions WHERE school_id = ? AND is_active = 1',
                 [schoolId]
             );
             return !!row;

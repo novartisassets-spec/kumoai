@@ -92,7 +92,7 @@ export class TeacherSessionManager {
                 created_at: now,
                 expires_at: expiresAt,
                 last_activity: now,
-                is_active: true,
+                is_active: 1,
                 context: {}
             });
 
@@ -213,7 +213,7 @@ export class TeacherSessionManager {
                             created_at: now,
                             expires_at: expiresAt,
                             last_activity: now,
-                            is_active: true,
+                            is_active: 1,
                             context: {}
                         });
                         logger.info({ sessionId, teacherId, phone }, 'Teacher session created and memory synced');
