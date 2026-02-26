@@ -3,7 +3,7 @@
 This pinger keeps your Render backend awake using Cloudflare Workers.
 
 ## Features
-- Random pings every 1-16 minutes (avoids bot detection)
+- Random pings every 1-16 minutes within a 30-minute cycle (avoids bot detection)
 - Sleeps during night hours (11pm - 5am Africa/Lagos time)
 - Uses random User-Agent strings to appear as real browsers
 - Frontend auto-wakeup when visitors access your site
@@ -21,7 +21,7 @@ This pinger keeps your Render backend awake using Cloudflare Workers.
 ### Option 2: CRON Trigger (Recommended)
 After deploying:
 1. In your Worker, go to "Triggers" tab
-2. Add a CRON trigger: `*/15 * * * *` (every 15 minutes)
+2. Add a CRON trigger: `*/30 * * * *` (every 30 minutes)
 3. The worker will automatically ping at random intervals
 
 ## How It Works
