@@ -294,45 +294,27 @@ export async function signup(data: SignupData): Promise<{ user: UserPayload; tok
         // Create admin user
         const userId = uuidv4();
         const passwordHash = await hashPassword(password);
-        process.stderr.write('[SIGNUP] Creating user: ' + userId + ' school: ' + schoolId + '\n');
-        process.stderr.write('[SIGNUP] SQL: INSERT INTO users...\n');
-        process.stderr.write('[SIGNUP] Params: ' + JSON.stringify([userId, adminPhone, 'System Admin', schoolId]) + '\n');
-
-        await new Promise<void>((resolve, reject) => {
-            db.getDB().run(
-                `INSERT INTO users (id, phone, role, name, school_id, password_hash, email, is_active)
-                 VALUES (?, ?, 'admin', ?, ?, ?, ?, 1)`,
-                [userId, adminPhone, 'System Admin', schoolId, passwordHash, email || null],
-                (err) => {
-                    if (err) {
-                        process.stderr.write('[SIGNUP] User insert ERROR: ' + err.message + '\n');
-                        reject(err);
-                    }
-                    else {
-                        process.stderr.write('[SIGNUP] User created OK, verifying...\n');
-                        resolve();
-                    }
-                }
-            );
-        });
-
+        
+        // Use db.run directly (async) instead of callback wrapper
+        // Use ? placeholders and let convertParams handle PostgreSQL conversion
+        const userInsertResult = await db.run(
+            `INSERT INTO users (id, phone, role, name, school_id, password_hash, email, is_active)
+             VALUES (?, ?, 'admin', ?, ?, ?, ?, true)`,
+            [userId, adminPhone, 'System Admin', schoolId, passwordHash, email || null]
+        );
+        
+        process.stderr.write('[SIGNUP] User insert result: ' + JSON.stringify(userInsertResult) + '\n');
+        
         // Verify user was actually created
-        const verifyUser: any = await new Promise((resolve) => {
-            db.getDB().get(
-                `SELECT id, phone, role, school_id FROM users WHERE id = ?`,
-                [userId],
-                (err, row) => {
-                    process.stderr.write('[SIGNUP] Verification query result: ' + JSON.stringify(row) + '\n');
-                    resolve(row);
-                }
-            );
-        });
-
+        const verifyUser = await db.get(
+            `SELECT id, phone, role, school_id FROM users WHERE id = ?`,
+            [userId]
+        );
+        
         if (!verifyUser) {
-            process.stderr.write('[SIGNUP] FATAL: User was NOT actually created in database!\n');
             throw new Error('User creation failed - insert did not persist');
         }
-        process.stderr.write('[SIGNUP] Verified: user exists in database\n');
+        process.stderr.write('[SIGNUP] Verified: user created successfully\n');
 
         // Initialize setup state
         await new Promise<void>((resolve) => {
