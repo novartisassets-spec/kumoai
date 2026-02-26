@@ -4531,6 +4531,24 @@ function ProfilePage({ onNavigate: _onNavigate }: { onNavigate: (page: string) =
 
 // Main App
 function App() {
+  // Wake up Render backend when frontend is accessed
+  useEffect(() => {
+    const wakeUpRender = async () => {
+      try {
+        // Get the API URL from env or construct it
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://kumo-api.onrender.com/api';
+        // Ping health endpoint - non-blocking, just wake up Render
+        fetch(`${apiUrl}/health`, { 
+          method: 'GET',
+          mode: 'no-cors',
+          cache: 'no-cache'
+        }).catch(() => {}); // Ignore errors - just wake up Render
+      } catch (e) {
+        // Ignore errors
+      }
+    };
+    wakeUpRender();
+  }, []);
   // Check URL for direct access routes
   const getPageFromUrl = () => {
     const path = window.location.pathname.replace('/', '');

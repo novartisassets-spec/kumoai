@@ -85,34 +85,25 @@ async function main() {
         console.log('\n════════════════════════════════════════════════════════════');
         
         // Auto-reconnect to previously connected schools
-        // Check both DB AND session files on disk
+        // Check database for existing WhatsApp sessions
         const previouslyConnected = schools.filter(s => {
+            // Check DB for connected status
             const dbConnected = s.connected_whatsapp_jid && s.whatsapp_connection_status === 'connected';
-            // Also check if session files exist on disk (same logic as multi-socket-manager)
-            const authBaseDir = path.resolve('kumo_auth_info');
-            const sessionPath = path.join(authBaseDir, s.id);
-            let sessionExists = false;
-            try {
-                sessionExists = fs.existsSync(sessionPath) && fs.readdirSync(sessionPath).length > 0;
-            } catch (e) {
-                // Ignore errors
-            }
-            return dbConnected || sessionExists;
+            return dbConnected;
         });
         
-        // TEMP: Disabled auto-reconnect to test login issue
-        // if (previouslyConnected.length > 0) {
-        //     console.log(`\n🔄 Auto-reconnecting to ${previouslyConnected.length} previously connected school(s)...`);
-        //     for (const school of previouslyConnected) {
-        //         console.log(`   ↻ Attempting reconnect for: ${school.name} (${school.id})`);
-        //         try {
-        //             await whatsappManager.connect(school.id);
-        //             console.log(`   ✅ Reconnect initiated for: ${school.name}`);
-        //         } catch (err: any) {
-        //             console.log(`   ❌ Reconnect failed for ${school.name}: ${err.message}`);
-        //         }
-        //     }
-        // }
+        if (previouslyConnected.length > 0) {
+            console.log(`\n🔄 Auto-reconnecting to ${previouslyConnected.length} previously connected school(s)...`);
+            for (const school of previouslyConnected) {
+                console.log(`   ↻ Attempting reconnect for: ${school.name} (${school.id})`);
+                try {
+                    await whatsappManager.connect(school.id);
+                    console.log(`   ✅ Reconnect initiated for: ${school.name}`);
+                } catch (err: any) {
+                    console.log(`   ❌ Reconnect failed for ${school.name}: ${err.message}`);
+                }
+            }
+        }
         
         console.log('\n👉 Backend ready! Each school can connect their own WhatsApp via the frontend.');
         
