@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     user_id TEXT NOT NULL,
     phone TEXT NOT NULL,
     role TEXT CHECK(role IN ('parent', 'teacher', 'admin')) NOT NULL,
-    context TEXT DEFAULT '{}', -- JSON
+    context TEXT DEFAULT '{}',
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS token_access_logs (
     expires_at TIMESTAMP NOT NULL,
     revoked_at TIMESTAMP,
     is_active BOOLEAN DEFAULT true,
-    details TEXT -- JSON
+    details TEXT
 );
 
 -- User sessions for JWT tracking
