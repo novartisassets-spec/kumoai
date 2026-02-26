@@ -367,12 +367,19 @@ export class Database {
         
         if (params.length === 0) return { sql: newSql, params };
         
+        // Convert boolean parameter values (1 -> true, 0 -> false)
+        const convertedParams = params.map(p => {
+            if (p === 1) return true;
+            if (p === 0) return false;
+            return p;
+        });
+        
         let paramIndex = 0;
         newSql = newSql.replace(/\?/g, () => {
             paramIndex++;
             return `$${paramIndex}`;
         });
-        return { sql: newSql, params };
+        return { sql: newSql, params: convertedParams };
     }
 
     public async run(sql: string, params: any[] = []): Promise<{ changes: number; lastInsertRowid: number }> {
