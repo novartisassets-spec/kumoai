@@ -563,21 +563,20 @@ export class WhatsAppTransportManager extends EventEmitter {
                 
                 console.log(`[WhatsApp] 🚪 Connection closed: status=${statusCode}, error=${errorMsg}`);
                 
-                // 🔄 SIMPLE RECONNECT: Just try to reconnect for ANY close except explicit logout
-                // Let Baileys handle session management - don't clear anything
-                const stopReconnecting = statusCode === DisconnectReason.loggedOut;
+                // 🔄 Always try to reconnect unless it's an explicit logout
+                // Only stop reconnecting on explicit logout (not connection failures)
+                const isExplicitLogout = statusCode === DisconnectReason.loggedOut || errorMsg?.includes('logged out');
                 
-                if (!stopReconnecting) {
+                if (!isExplicitLogout) {
                     console.log(`[WhatsApp] 🔄 Connection lost - will reconnect automatically...`);
                     this.sockets.delete(schoolId);
                     await this.updateConnectionState(schoolId, 'connecting');
                     
-                    // Simple reconnect with delay - let Baileys handle session files
+                    // Reconnect with delay
                     setTimeout(() => {
                         console.log(`[WhatsApp] 🔄 Reconnecting now...`);
                         this.connect(schoolId).catch(err => {
                             console.log(`[WhatsApp] ❌ Reconnect error: ${err.message}`);
-                            // Don't clear session - let user manually reconnect if needed
                         });
                     }, 5000);
                 } else {
