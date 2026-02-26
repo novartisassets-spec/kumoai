@@ -501,23 +501,36 @@ export class WhatsAppTransportManager extends EventEmitter {
      * Simple approach: Files only, let Baileys handle everything
      */
     private async createSocket(schoolId: string, school: any, sessionDir: string, phoneNumber: string | null): Promise<void> {
-        // Use file-based auth (Baileys handles everything)
-        const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-        
-        // Try to restore from DB if files are empty/not valid
-        if (!state.creds?.registered) {
-            try {
-                const dbSession = await whatsappSessionService.loadSession(schoolId);
-                if (dbSession && dbSession.creds?.registered) {
-                    console.log(`[WhatsApp] 🔄 Restoring session from database...`);
-                    // Write creds to files
-                    const credsPath = path.join(sessionDir, 'creds.json');
-                    fs.writeFileSync(credsPath, JSON.stringify(dbSession.creds));
-                    console.log(`[WhatsApp] ✅ Session restored from database`);
-                }
-            } catch (e) {
-                console.log(`[WhatsApp] ⚠️ DB restore skipped:`, e.message);
+        // Try to restore from DB first BEFORE creating socket
+        let dbSession = null;
+        try {
+            dbSession = await whatsappSessionService.loadSession(schoolId);
+            if (dbSession && dbSession.creds?.registered) {
+                console.log(`[WhatsApp] 🔄 Found existing session in database, will restore...`);
             }
+        } catch (e) {
+            console.log(`[WhatsApp] ⚠️ Could not check DB for session:`, e.message);
+        }
+        
+        // Use file-based auth (Baileys handles everything)
+        const { state, saveCreds, ...rest } = await useMultiFileAuthState(sessionDir);
+        
+        // If we have a valid DB session, restore it
+        if (dbSession && dbSession.creds?.registered) {
+            try {
+                console.log(`[WhatsApp] 🔄 Restoring session from database...`);
+                // Write creds to file
+                const credsPath = path.join(sessionDir, 'creds.json');
+                fs.writeFileSync(credsPath, JSON.stringify(dbSession.creds));
+                
+                // Also update the state object directly
+                state.creds = dbSession.creds;
+                console.log(`[WhatsApp] ✅ Session restored from database`);
+            } catch (e) {
+                console.log(`[WhatsApp] ⚠️ DB restore failed:`, e.message);
+            }
+        } else {
+            console.log(`[WhatsApp] 📁 No existing session found, need to scan QR code`);
         }
         
         // Wrap saveCreds to also backup to database

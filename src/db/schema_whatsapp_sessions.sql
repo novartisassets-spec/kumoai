@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS whatsapp_sessions (
     phone_number TEXT,
     connected_at TIMESTAMP WITH TIME ZONE,
     last_active_at TIMESTAMP WITH TIME ZONE,
-    is_active BOOLEAN DEFAULT true,
+    is_active INTEGER DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
