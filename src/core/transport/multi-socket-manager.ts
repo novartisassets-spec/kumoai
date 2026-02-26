@@ -27,7 +27,7 @@ import { v4 as uuidv4 } from 'uuid';
 import pino from 'pino';
 import { messenger, OutboundMessage } from '../../services/messenger';
 import EventEmitter from 'events';
-import { useDBAuthState, deleteDBSession } from './db-auth-state';
+import { whatsappSessionService } from '../../services/whatsapp-session';
 
 export interface QRCodeData {
     schoolId: string;
@@ -360,8 +360,47 @@ export class WhatsAppTransportManager extends EventEmitter {
 
     /**
      * Check if session is valid (user has completed pairing)
+     * Priority: 1) Database (persistent), 2) Filesystem
      */
     private async isSessionValid(schoolId: string): Promise<boolean> {
+        // FIRST: Check database for persistent session
+        try {
+            const dbSession = await whatsappSessionService.loadSession(schoolId);
+            if (dbSession && dbSession.creds && dbSession.creds.registered === true) {
+                console.log(`[WhatsApp] 📂 Found valid session in database for ${schoolId}`);
+                
+                // Restore session to filesystem for Baileys
+                const sessionDir = this.getSessionDir(schoolId);
+                const credsPath = path.join(sessionDir, 'creds.json');
+                
+                // Ensure directory exists
+                if (!fs.existsSync(sessionDir)) {
+                    fs.mkdirSync(sessionDir, { recursive: true });
+                }
+                
+                // Write creds to file
+                fs.writeFileSync(credsPath, JSON.stringify(dbSession.creds));
+                
+                // Also restore keys if available
+                if (dbSession.keys) {
+                    const keysDir = path.join(sessionDir, 'keys');
+                    if (!fs.existsSync(keysDir)) {
+                        fs.mkdirSync(keysDir, { recursive: true });
+                    }
+                    for (const [keyName, keyValue] of Object.entries(dbSession.keys)) {
+                        const keyPath = path.join(keysDir, `${keyName}.json`);
+                        fs.writeFileSync(keyPath, JSON.stringify(keyValue));
+                    }
+                }
+                
+                console.log(`[WhatsApp] ✅ Session restored from database to filesystem`);
+                return true;
+            }
+        } catch (err) {
+            console.log(`[WhatsApp] ⚠️ Database session check failed:`, err);
+        }
+        
+        // SECOND: Fallback to filesystem check
         const sessionDir = this.getSessionDir(schoolId);
         const credsPath = path.join(sessionDir, 'creds.json');
         
@@ -460,17 +499,56 @@ export class WhatsAppTransportManager extends EventEmitter {
 
     /**
      * Create WhatsApp socket with the given session
-     * This is the core function that creates the socket and handles events
+     * Simple approach: Files primary, DB backup
      */
     private async createSocket(schoolId: string, school: any, sessionDir: string, phoneNumber: string | null): Promise<void> {
-        // Use DB auth state when Supabase is available, otherwise fall back to file-based
-        let authState;
-        if (db.isSupabase()) {
-            authState = await useDBAuthState(schoolId);
-        } else {
-            authState = await useMultiFileAuthState(sessionDir);
+        // Use file-based auth as primary (same as old working code)
+        const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+        
+        // Try to restore from DB if files don't have valid session
+        if (!state.creds?.registered) {
+            try {
+                const dbSession = await whatsappSessionService.loadSession(schoolId);
+                if (dbSession && dbSession.creds?.registered) {
+                    console.log(`[WhatsApp] 🔄 Restoring session from database...`);
+                    // Write DB creds to files
+                    const credsPath = path.join(sessionDir, 'creds.json');
+                    fs.writeFileSync(credsPath, JSON.stringify(dbSession.creds));
+                    // Also restore keys if available
+                    if (dbSession.keys) {
+                        const keysDir = path.join(sessionDir, 'keys');
+                        if (!fs.existsSync(keysDir)) {
+                            fs.mkdirSync(keysDir, { recursive: true });
+                        }
+                        for (const [keyName, keyValue] of Object.entries(dbSession.keys)) {
+                            const keyPath = path.join(keysDir, `${keyName}.json`);
+                            fs.writeFileSync(keyPath, JSON.stringify(keyValue));
+                        }
+                    }
+                    // Reload state
+                    const { state: restoredState } = await useMultiFileAuthState(sessionDir);
+                    if (restoredState.creds) {
+                        Object.assign(state.creds, restoredState.creds);
+                    }
+                    console.log(`[WhatsApp] ✅ Session restored from database`);
+                }
+            } catch (e) {
+                console.log(`[WhatsApp] ⚠️ DB restore skipped:`, e.message);
+            }
         }
-        const { state, saveCreds } = authState;
+        
+        // Wrap saveCreds to also backup to database
+        const originalSaveCreds = saveCreds;
+        const wrappedSaveCreds = async () => {
+            await originalSaveCreds();
+            // Backup to database
+            try {
+                await whatsappSessionService.saveSession(schoolId, { creds: state.creds, keys: {} });
+            } catch (e) {
+                console.log(`[WhatsApp] ⚠️ DB backup failed:`, e.message);
+            }
+        };
+        
         const { version, isLatest } = await fetchLatestBaileysVersion();
         
         console.log(`[WhatsApp] 📦 Baileys version: ${version.join('.')}, isLatest: ${isLatest}`);
@@ -593,8 +671,8 @@ export class WhatsAppTransportManager extends EventEmitter {
             }
         });
         
-        // Credentials update
-        sock.ev.on('creds.update', saveCreds);
+        // Credentials update - wrap to backup to DB
+        sock.ev.on('creds.update', wrappedSaveCreds);
         
         // LID resolution from contacts - also listen to history to build map early
         sock.ev.on('messaging-history.set', ({ contacts }) => {
@@ -1117,12 +1195,10 @@ export class WhatsAppTransportManager extends EventEmitter {
 
     /**
      * Clear session directory for a school
-     */
+      */
     private async clearSessionDir(schoolId: string): Promise<void> {
-        // Clear DB session if using Supabase
-        if (db.isSupabase()) {
-            await deleteDBSession(schoolId);
-        }
+        // Clear DB session 
+        await whatsappSessionService.deleteSession(schoolId);
         
         const sessionDir = this.getSessionDir(schoolId);
         if (fs.existsSync(sessionDir)) {
