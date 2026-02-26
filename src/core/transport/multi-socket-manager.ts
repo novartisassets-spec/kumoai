@@ -408,7 +408,6 @@ export class WhatsAppTransportManager extends EventEmitter {
                 
                 // Restore session to filesystem for Baileys
                 const sessionDir = this.getSessionDir(schoolId);
-                const credsPath = path.join(sessionDir, 'creds.json');
                 
                 // Ensure directory exists
                 if (!fs.existsSync(sessionDir)) {
@@ -419,6 +418,7 @@ export class WhatsAppTransportManager extends EventEmitter {
                 const revivedSession = reviveBuffers(dbSession);
                 
                 // Write creds to file
+                const credsPath = path.join(sessionDir, 'creds.json');
                 fs.writeFileSync(credsPath, JSON.stringify(revivedSession.creds));
                 
                 // Also restore keys if available
@@ -449,9 +449,14 @@ export class WhatsAppTransportManager extends EventEmitter {
         }
         
         try {
-            const creds = JSON.parse(fs.readFileSync(credsPath, 'utf-8'));
+            const credsData = fs.readFileSync(credsPath, 'utf-8');
+            const creds = JSON.parse(credsData);
+            // Need to revive Buffers in the loaded creds
+            const revivedCreds = reviveBuffers(creds);
+            // Write back with revived Buffers
+            fs.writeFileSync(credsPath, JSON.stringify(revivedCreds));
             // Session is valid only if user has completed pairing (registered: true)
-            return creds.registered === true;
+            return revivedCreds.registered === true;
         } catch (e) {
             return false;
         }
@@ -542,7 +547,12 @@ export class WhatsAppTransportManager extends EventEmitter {
      */
     private async createSocket(schoolId: string, school: any, sessionDir: string, phoneNumber: string | null): Promise<void> {
         // Use file-based auth as primary (same as old working code)
-        const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+        let { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+        
+        // Revive Buffer objects in creds after loading from file
+        if (state.creds) {
+            state.creds = reviveBuffers(state.creds);
+        }
         
         // Try to restore from DB if files don't have valid session
         if (!state.creds?.registered) {
@@ -552,9 +562,12 @@ export class WhatsAppTransportManager extends EventEmitter {
                     console.log(`[WhatsApp] 🔄 Restoring session from database...`);
                     // Revive Buffer objects that were serialized to JSON
                     const revivedSession = reviveBuffers(dbSession);
-                    // Write DB creds to files
-                    const credsPath = path.join(sessionDir, 'creds.json');
-                    fs.writeFileSync(credsPath, JSON.stringify(revivedSession.creds));
+                    
+                    // Directly patch the state with revived creds
+                    if (revivedSession.creds) {
+                        state.creds = revivedSession.creds;
+                    }
+                    
                     // Also restore keys if available
                     if (revivedSession.keys) {
                         const keysDir = path.join(sessionDir, 'keys');
@@ -566,11 +579,11 @@ export class WhatsAppTransportManager extends EventEmitter {
                             fs.writeFileSync(keyPath, JSON.stringify(reviveBuffers(keyValue)));
                         }
                     }
-                    // Reload state
+                    
+                    // Reload keys from the files we just wrote
                     const { state: restoredState } = await useMultiFileAuthState(sessionDir);
-                    if (restoredState.creds) {
-                        Object.assign(state.creds, restoredState.creds);
-                    }
+                    state.keys = restoredState.keys;
+                    
                     console.log(`[WhatsApp] ✅ Session restored from database`);
                 }
             } catch (e) {
