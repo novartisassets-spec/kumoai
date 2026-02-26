@@ -311,7 +311,44 @@ export class Database {
             }
             
             const sql = fs.readFileSync(s.path, 'utf-8');
-            const statements = sql.split(';').map(st => st.trim()).filter(st => st.length > 0 && !st.startsWith('--'));
+            
+            // Split SQL by semicolon but preserve DO $$ blocks
+            // This is a simple approach: we'll run the whole file if it contains DO $$
+            let statements: string[];
+            if (sql.includes('DO $$')) {
+                // For files with DO $$ blocks, we need to be smarter
+                // Split by ';' but reconstruct statements that contain $$
+                const parts = sql.split(';');
+                statements = [];
+                let current = '';
+                let inDollarQuote = false;
+                let dollarChar = '';
+                
+                for (const part of parts) {
+                    current += part;
+                    // Check for dollar quote start/end
+                    const dollarMatch = part.match(/\$([a-zA-Z_]*)\$/);
+                    if (dollarMatch) {
+                        if (!inDollarQuote) {
+                            inDollarQuote = true;
+                            dollarChar = dollarMatch[0];
+                        } else if (dollarMatch[0] === dollarChar) {
+                            inDollarQuote = false;
+                            dollarChar = '';
+                        }
+                    }
+                    
+                    if (!inDollarQuote && current.trim().length > 0) {
+                        statements.push(current.trim());
+                        current = '';
+                    }
+                }
+                if (current.trim().length > 0) {
+                    statements.push(current.trim());
+                }
+            } else {
+                statements = sql.split(';').map(st => st.trim()).filter(st => st.length > 0 && !st.startsWith('--'));
+            }
 
             for (const statement of statements) {
                 try {

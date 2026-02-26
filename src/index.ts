@@ -86,11 +86,29 @@ async function main() {
         
         // Auto-reconnect to previously connected schools
         // Check database for existing WhatsApp sessions
-        const previouslyConnected = schools.filter(s => {
-            // Check DB for connected status
-            const dbConnected = s.connected_whatsapp_jid && s.whatsapp_connection_status === 'connected';
+        // Also check whatsapp_sessions table for any existing sessions
+        let previouslyConnected = schools.filter(s => {
+            // Check DB for connected status OR if there's a saved session
+            const dbConnected = (s.connected_whatsapp_jid && s.whatsapp_connection_status === 'connected') 
+                || s.whatsapp_connection_status === 'connecting';
             return dbConnected;
         });
+        
+        // Also check for any schools with existing WhatsApp sessions in DB
+        try {
+            const sessions = await db.all('SELECT school_id FROM whatsapp_sessions WHERE is_active = 1', []);
+            const sessionSchoolIds = new Set(sessions.map((s: any) => s.school_id));
+            const schoolsWithSessions = schools.filter(s => sessionSchoolIds.has(s.id));
+            // Add schools with sessions that aren't already in the list
+            for (const school of schoolsWithSessions) {
+                if (!previouslyConnected.find(s => s.id === school.id)) {
+                    previouslyConnected.push(school);
+                    console.log(`   📱 Found existing session for: ${school.name}`);
+                }
+            }
+        } catch (err) {
+            console.log(`   ⚠️ Could not check for existing sessions:`, err);
+        }
         
         if (previouslyConnected.length > 0) {
             console.log(`\n🔄 Auto-reconnecting to ${previouslyConnected.length} previously connected school(s)...`);
