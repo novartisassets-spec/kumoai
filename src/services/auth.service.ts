@@ -299,7 +299,7 @@ export async function signup(data: SignupData): Promise<{ user: UserPayload; tok
         // Use ? placeholders and let convertParams handle PostgreSQL conversion
         const userInsertResult = await db.run(
             `INSERT INTO users (id, phone, role, name, school_id, password_hash, email, is_active)
-             VALUES (?, ?, 'admin', ?, ?, ?, ?, true)`,
+             VALUES (?, ?, 'admin', ?, ?, ?, ?, 1)`,
             [userId, adminPhone, 'System Admin', schoolId, passwordHash, email || null]
         );
         
