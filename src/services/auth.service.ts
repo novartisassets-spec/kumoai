@@ -244,105 +244,141 @@ export async function login(credentials: LoginCredentials): Promise<{ user: User
 export async function signup(data: SignupData): Promise<{ user: UserPayload; tokens: AuthTokens }> {
     const { schoolName, adminPhone, email, password, schoolType, address } = data;
 
-    console.log('[SIGNUP] Starting signup for:', adminPhone);
+    process.stderr.write('[SIGNUP] ========== STARTING ==========\n');
+    process.stderr.write('[SIGNUP] Phone: ' + adminPhone + '\n');
 
-    // Check if phone already exists
-    const existingUser: any = await new Promise((resolve) => {
-        db.getDB().get(
-            `SELECT id FROM users WHERE phone = ?`,
-            [adminPhone],
-            (err, row) => resolve(row)
-        );
-    });
+    try {
+        // Check if phone already exists
+        const existingUser: any = await new Promise((resolve) => {
+            db.getDB().get(
+                `SELECT id FROM users WHERE phone = ?`,
+                [adminPhone],
+                (err, row) => resolve(row)
+            );
+        });
 
-    if (existingUser) {
-        throw new Error('Phone number already registered');
-    }
-
-    // Create school
-    const schoolId = uuidv4();
-    const schoolTypeValue = schoolType || 'SECONDARY';
-    console.log('[SIGNUP] Creating school:', schoolId);
-    await new Promise<void>((resolve, reject) => {
-        db.getDB().run(
-            `INSERT INTO schools (id, name, admin_phone, school_type, config_json, setup_status)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [
-                schoolId,
-                schoolName,
-                adminPhone,
-                schoolTypeValue,
-                JSON.stringify({ address, email }),
-                'PENDING_SETUP'
-            ],
-            (err) => {
-                if (err) {
-                    console.log('[SIGNUP] School insert error:', err);
-                    reject(err);
-                }
-                else {
-                    console.log('[SIGNUP] School created successfully');
-                    resolve();
-                }
-            }
-        );
-    });
-
-    // Create admin user
-    const userId = uuidv4();
-    const passwordHash = await hashPassword(password);
-    console.log('[SIGNUP] Creating user:', userId, 'for school:', schoolId);
-
-    await new Promise<void>((resolve, reject) => {
-        db.getDB().run(
-            `INSERT INTO users (id, phone, role, name, school_id, password_hash, email, is_active)
-             VALUES (?, ?, 'admin', ?, ?, ?, ?, 1)`,
-            [userId, adminPhone, 'System Admin', schoolId, passwordHash, email || null],
-            (err) => {
-                if (err) {
-                    console.log('[SIGNUP] User insert error:', err);
-                    reject(err);
-                }
-                else {
-                    console.log('[SIGNUP] User created successfully');
-                    resolve();
-                }
-            }
-        );
-    });
-
-    // Initialize setup state
-    await new Promise<void>((resolve) => {
-        db.getDB().run(
-            `INSERT INTO setup_state (school_id, current_step, completed_steps, is_active)
-             VALUES (?, 'PENDING_SETUP', '[]', 1)`,
-            [schoolId],
-            () => resolve()
-        );
-    });
-
-    // Generate tokens
-    const payload: UserPayload = {
-        userId,
-        phone: adminPhone,
-        role: 'admin',
-        schoolId,
-        schoolName
-    };
-
-    const accessToken = generateAccessToken(payload);
-    const refreshToken = generateRefreshToken(userId);
-
-    logger.info({ userId, schoolId }, 'New school and admin created');
-
-    return {
-        user: payload,
-        tokens: {
-            accessToken,
-            refreshToken,
-            expiresIn: 900
+        if (existingUser) {
+            throw new Error('Phone number already registered');
         }
-    };
+
+        // Create school
+        const schoolId = uuidv4();
+        const schoolTypeValue = schoolType || 'SECONDARY';
+        process.stderr.write('[SIGNUP] Creating school: ' + schoolId + '\n');
+        
+        await new Promise<void>((resolve, reject) => {
+            db.getDB().run(
+                `INSERT INTO schools (id, name, admin_phone, school_type, config_json, setup_status)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [
+                    schoolId,
+                    schoolName,
+                    adminPhone,
+                    schoolTypeValue,
+                    JSON.stringify({ address, email }),
+                    'PENDING_SETUP'
+                ],
+                (err) => {
+                    if (err) {
+                        process.stderr.write('[SIGNUP] School insert ERROR: ' + err.message + '\n');
+                        reject(err);
+                    }
+                    else {
+                        process.stderr.write('[SIGNUP] School created OK\n');
+                        resolve();
+                    }
+                }
+            );
+        });
+
+        // Create admin user
+        const userId = uuidv4();
+        const passwordHash = await hashPassword(password);
+        process.stderr.write('[SIGNUP] Creating user: ' + userId + ' school: ' + schoolId + '\n');
+        process.stderr.write('[SIGNUP] SQL: INSERT INTO users...\n');
+        process.stderr.write('[SIGNUP] Params: ' + JSON.stringify([userId, adminPhone, 'System Admin', schoolId]) + '\n');
+
+        await new Promise<void>((resolve, reject) => {
+            db.getDB().run(
+                `INSERT INTO users (id, phone, role, name, school_id, password_hash, email, is_active)
+                 VALUES (?, ?, 'admin', ?, ?, ?, ?, 1)`,
+                [userId, adminPhone, 'System Admin', schoolId, passwordHash, email || null],
+                (err) => {
+                    if (err) {
+                        process.stderr.write('[SIGNUP] User insert ERROR: ' + err.message + '\n');
+                        reject(err);
+                    }
+                    else {
+                        process.stderr.write('[SIGNUP] User created OK, verifying...\n');
+                        resolve();
+                    }
+                }
+            );
+        });
+
+        // Verify user was actually created
+        const verifyUser: any = await new Promise((resolve) => {
+            db.getDB().get(
+                `SELECT id, phone, role, school_id FROM users WHERE id = ?`,
+                [userId],
+                (err, row) => {
+                    process.stderr.write('[SIGNUP] Verification query result: ' + JSON.stringify(row) + '\n');
+                    resolve(row);
+                }
+            );
+        });
+
+        if (!verifyUser) {
+            process.stderr.write('[SIGNUP] FATAL: User was NOT actually created in database!\n');
+            throw new Error('User creation failed - insert did not persist');
+        }
+        process.stderr.write('[SIGNUP] Verified: user exists in database\n');
+
+        // Initialize setup state
+        await new Promise<void>((resolve) => {
+            db.getDB().run(
+                `INSERT INTO setup_state (school_id, current_step, completed_steps, is_active)
+                 VALUES (?, 'PENDING_SETUP', '[]', 1)`,
+                [schoolId],
+                (err) => {
+                    if (err) {
+                        process.stderr.write('[SIGNUP] Setup state insert ERROR: ' + err.message + '\n');
+                    } else {
+                        process.stderr.write('[SIGNUP] Setup state created OK\n');
+                    }
+                    resolve();
+                }
+            );
+        });
+
+        // Generate tokens
+        const payload: UserPayload = {
+            userId,
+            phone: adminPhone,
+            role: 'admin',
+            schoolId,
+            schoolName
+        };
+
+        const accessToken = generateAccessToken(payload);
+        const refreshToken = generateRefreshToken(userId);
+
+        process.stderr.write('[SIGNUP] ========== SIGNUP COMPLETE ==========\n');
+
+        return {
+            user: payload,
+            tokens: {
+                accessToken,
+                refreshToken,
+                expiresIn: 900
+            }
+        };
+    } catch (error: any) {
+        process.stderr.write('[SIGNUP] ========== SIGNUP FAILED ==========\n');
+        process.stderr.write('[SIGNUP] Error: ' + error.message + '\n');
+        process.stderr.write('[SIGNUP] Stack: ' + error.stack + '\n');
+        throw error;
+    }
 }
 
 /**
