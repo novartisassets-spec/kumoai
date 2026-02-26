@@ -358,8 +358,15 @@ export class Database {
     // Also convert SQLite boolean syntax (= 1, = 0) to PostgreSQL (= true, = false)
     // And convert SQLite date functions to PostgreSQL
     private convertParams(sql: string, params: any[] = []): { sql: string, params: any[] } {
-        // First convert boolean comparisons from SQLite to PostgreSQL
-        let newSql = sql.replace(/= 1\b/g, '= true').replace(/= 0\b/g, '= false');
+        let newSql = sql;
+        
+        // Convert boolean comparisons from SQLite to PostgreSQL (= 1, = 0)
+        newSql = newSql.replace(/= 1\b/g, '= true').replace(/= 0\b/g, '= false');
+        
+        // Convert boolean literals in VALUES clause (e.g., VALUES (..., 1) -> VALUES (..., true))
+        // Match 1 or 0 that appear after comma or open paren, not inside strings
+        newSql = newSql.replace(/,\s*1\b/g, ', true').replace(/,\s*0\b/g, ', false');
+        newSql = newSql.replace(/\(\s*1\b/g, '(true').replace(/\(\s*0\b/g, '(false');
         
         // Convert SQLite date functions to PostgreSQL
         newSql = newSql.replace(/datetime\('now'\)/gi, 'NOW()');
