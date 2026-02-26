@@ -14,7 +14,7 @@ export interface TeacherSession {
     created_at: string;
     expires_at: string;
     last_activity: string;
-    is_active: boolean;
+    is_active: number;
     context: any; // Added for unified context storage (PDF drafts, etc)
 }
 
@@ -250,7 +250,7 @@ export class TeacherSessionManager {
                             created_at: row.created_at,
                             expires_at: row.expires_at,
                             last_activity: row.last_activity,
-                            is_active: !!row.is_active,
+                            is_active: row.is_active,
                             context: JSON.parse(row.context_json || '{}')
                         });
                     }
@@ -285,7 +285,7 @@ export class TeacherSessionManager {
                             created_at: row.created_at,
                             expires_at: row.expires_at,
                             last_activity: row.last_activity,
-                            is_active: !!row.is_active,
+                            is_active: row.is_active,
                             context: JSON.parse(row.context_json || '{}')
                         });
                     }
