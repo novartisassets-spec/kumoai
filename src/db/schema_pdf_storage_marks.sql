@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS pdf_documents (
     generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sent_to_phone TEXT,
     sent_at TIMESTAMP,
-    confirmed_by_teacher BOOLEAN DEFAULT false,
+    confirmed_by_teacher INTEGER DEFAULT 0,
     confirmed_at TIMESTAMP,
     confirmation_notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

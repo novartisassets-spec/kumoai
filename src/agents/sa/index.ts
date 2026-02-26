@@ -358,9 +358,7 @@ export class SchoolAdminAgent extends BaseAgent {
             });
             escalationContext += '\n**CRITICAL**: When responding to these escalations:\n';
             escalationContext += '1. Reference the exact ESCALATION ID in your response\n';
-            // Add absence-specific guidance
-            escalationContext += '2. For ATTENDANCE_ABSENCE: If admin says "Yes", "contact parents", "engage parents" → set action_required: "ENGAGE_PARENTS" with absentees in payload\n';
-            escalationContext += '3. Include escalation_payload with escalation_id, admin_decision, and admin_instruction\n\n';
+            escalationContext += '2. Include escalation_payload with escalation_id, admin_decision, and admin_instruction\n\n';
         }
 
         // Fetch admin name for personalization

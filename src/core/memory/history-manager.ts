@@ -177,6 +177,13 @@ export class HistoryManager {
                 const countSql = `SELECT COUNT(*) as count FROM messages WHERE user_id = ? AND created_at > ? AND is_internal = false`;
                 
                 db.getDB().get(countSql, [userId, lastTimestamp], (err, countRow: any) => {
+         , (err, row: any) => {
+                if (err) return reject(err);
+                
+                const lastTimestamp = row ? row.created_at : '1970-01-01 00:00:00';
+                const countSql = `SELECT COUNT(*) as count FROM messages WHERE user_id = ? AND created_at > ? AND is_internal = false`;
+                
+                db.getDB().get(countSql, [userId, lastTimestamp], (err, countRow: any) => {
                     if (err) reject(err);
                     else resolve(countRow.count);
                 });
