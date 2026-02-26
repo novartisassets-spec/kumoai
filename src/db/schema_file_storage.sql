@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS pdf_signatures (
 CREATE INDEX IF NOT EXISTS idx_file_storage_school ON file_storage(school_id);
 CREATE INDEX IF NOT EXISTS idx_file_storage_user ON file_storage(user_id);
 CREATE INDEX IF NOT EXISTS idx_file_storage_checksum ON file_storage(checksum);
-CREATE INDEX IF NOT EXISTS idx_file_storage_expires_at ON file_storage(expires_at) WHERE is_archived = 0;
+CREATE INDEX IF NOT EXISTS idx_file_storage_expires_at ON file_storage(expires_at) WHERE is_archived = false;
 
 CREATE INDEX IF NOT EXISTS idx_moderation_logs_school ON moderation_logs(school_id);
 CREATE INDEX IF NOT EXISTS idx_moderation_logs_timestamp ON moderation_logs(timestamp DESC);

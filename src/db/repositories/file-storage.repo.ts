@@ -132,7 +132,7 @@ export class FileStorageRepository {
         return new Promise<void>((resolve, reject) => {
             const sql = `
                 UPDATE file_storage 
-                SET is_archived = 1, archived_at = CURRENT_TIMESTAMP, archive_reason = ?
+                SET is_archived = true, archived_at = CURRENT_TIMESTAMP, archive_reason = ?
                 WHERE file_id = ?
             `;
 

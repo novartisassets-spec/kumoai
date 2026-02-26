@@ -190,7 +190,7 @@ export async function useDBAuthState(schoolId: string): Promise<{
             
             await pool.query(`
                 INSERT INTO whatsapp_sessions (school_id, auth_data, last_active_at, is_active)
-                VALUES ($1, $2, NOW(), true)
+                VALUES ($1, $2, NOW(), 1)
                 ON CONFLICT (school_id) DO UPDATE SET
                     auth_data = EXCLUDED.auth_data,
                     last_active_at = EXCLUDED.last_active_at,

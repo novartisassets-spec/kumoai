@@ -106,7 +106,7 @@ export class HistoryManager {
                 SELECT m.*, u.role 
                 FROM messages m
                 LEFT JOIN users u ON m.user_id = u.id
-                WHERE m.user_id = ? AND m.school_id = ? AND m.is_internal = 0
+                WHERE m.user_id = ? AND m.school_id = ? AND m.is_internal = false
                 ORDER BY m.timestamp DESC
                 LIMIT ?
               ) ORDER BY timestamp ASC`
@@ -114,7 +114,7 @@ export class HistoryManager {
                 SELECT m.*, u.role 
                 FROM messages m
                 LEFT JOIN users u ON m.user_id = u.id
-                WHERE m.from_phone = ? AND m.school_id = ? AND m.user_id IS NULL AND m.is_internal = 0
+                WHERE m.from_phone = ? AND m.school_id = ? AND m.user_id IS NULL AND m.is_internal = false
                 ORDER BY m.timestamp DESC
                 LIMIT ?
               ) ORDER BY timestamp ASC`;
@@ -130,8 +130,8 @@ export class HistoryManager {
         if (!schoolId) {
             logger.warn({ fromPhone, userId }, '⚠️ [HistoryManager] getSlidingWindow called WITHOUT schoolId - potential leakage risk');
             finalSql = userId 
-                ? `SELECT * FROM (SELECT m.*, u.role FROM messages m LEFT JOIN users u ON m.user_id = u.id WHERE m.user_id = ? AND m.is_internal = 0 ORDER BY m.timestamp DESC LIMIT ?) ORDER BY timestamp ASC`
-                : `SELECT * FROM (SELECT m.*, u.role FROM messages m LEFT JOIN users u ON m.user_id = u.id WHERE m.from_phone = ? AND m.user_id IS NULL AND m.is_internal = 0 ORDER BY m.timestamp DESC LIMIT ?) ORDER BY timestamp ASC`;
+                ? `SELECT * FROM (SELECT m.*, u.role FROM messages m LEFT JOIN users u ON m.user_id = u.id WHERE m.user_id = ? AND m.is_internal = false ORDER BY m.timestamp DESC LIMIT ?) ORDER BY timestamp ASC`
+                : `SELECT * FROM (SELECT m.*, u.role FROM messages m LEFT JOIN users u ON m.user_id = u.id WHERE m.from_phone = ? AND m.user_id IS NULL AND m.is_internal = false ORDER BY m.timestamp DESC LIMIT ?) ORDER BY timestamp ASC`;
             finalParams = [param, limit];
         }
 
@@ -174,7 +174,7 @@ export class HistoryManager {
                 if (err) return reject(err);
                 
                 const lastTimestamp = row ? row.created_at : '1970-01-01 00:00:00';
-                const countSql = `SELECT COUNT(*) as count FROM messages WHERE user_id = ? AND created_at > ? AND is_internal = 0`;
+                const countSql = `SELECT COUNT(*) as count FROM messages WHERE user_id = ? AND created_at > ? AND is_internal = false`;
                 
                 db.getDB().get(countSql, [userId, lastTimestamp], (err, countRow: any) => {
                     if (err) reject(err);

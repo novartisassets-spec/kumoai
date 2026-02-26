@@ -16,7 +16,7 @@ export class WhatsAppSessionService {
             if (db.isSupabase()) {
                 await db.run(
                     `INSERT INTO whatsapp_sessions (school_id, auth_data, last_active_at, is_active)
-                     VALUES ($1, $2, NOW(), true)
+                     VALUES ($1, $2, NOW(), 1)
                      ON CONFLICT(school_id) DO UPDATE SET
                      auth_data = $2, last_active_at = NOW(), is_active = 1`,
                     [schoolId, sessionStr]

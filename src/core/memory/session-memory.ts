@@ -246,7 +246,7 @@ User Input: ${userInput}
                 
                 const archiveSql = `
                     INSERT INTO messages (id, school_id, user_id, from_phone, type, body, media_path, context, timestamp, action_performed, action_status, is_internal, created_at)
-                    SELECT id, school_id, user_id, from_phone, type, body, media_path, context, timestamp, action_performed, action_status, 0, created_at
+                    SELECT id, school_id, user_id, from_phone, type, body, media_path, context, timestamp, action_performed, action_status, false, created_at
                     FROM session_memory 
                     WHERE session_id = ?
                 `;
