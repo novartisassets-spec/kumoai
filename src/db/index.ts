@@ -318,10 +318,8 @@ export class Database {
                     await this.executeSQL(statement);
                 } catch (err: any) {
                     const errorMsg = err.message || String(err);
-                    if (errorMsg.includes('duplicate table') || 
-                        errorMsg.includes('already exists') ||
-                        errorMsg.includes('duplicate column') ||
-                        (errorMsg.includes('relation') && errorMsg.includes('already exists'))) {
+                    // Only silent skip for duplicate/already exists
+                    if (errorMsg.includes('duplicate') || errorMsg.includes('already exists')) {
                         // Silent skip for idempotent operations
                     } else {
                         logger.error({ err, schema: s.name, statement: statement.substring(0, 100) }, 'Failed to execute statement');
@@ -340,8 +338,8 @@ export class Database {
                 return;
             } catch (err: any) {
                 const errorMsg = err.message || String(err);
-                // If it's a "relation does not exist" error, it's expected for some statements
-                if (errorMsg.includes('does not exist') || errorMsg.includes('already exists')) {
+                // Only ignore "already exists" errors
+                if (errorMsg.includes('already exists') || errorMsg.includes('duplicate')) {
                     return;
                 }
                 // Retry on network errors
