@@ -67,7 +67,7 @@ export default {
     
     const delay = getRandomDelay();
     ctx.waitUntil(
-      new Promise(resolve => setTimeout(async () => {
+      new Promise<void>(resolve => setTimeout(async () => {
         await pingRender();
         resolve();
       }, delay))

@@ -1,0 +1,9 @@
+name = "kumo-pinger"
+main = "worker.ts"
+compatibility_date = "2024-01-01"
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+[env.production]
+name = "kumo-pinger"
