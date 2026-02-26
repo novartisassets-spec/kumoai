@@ -29,6 +29,43 @@ import { messenger, OutboundMessage } from '../../services/messenger';
 import EventEmitter from 'events';
 import { whatsappSessionService } from '../../services/whatsapp-session';
 
+interface SerializedBuffer {
+    type: string;
+    data: number[] | string;
+}
+
+function isSerializedBuffer(obj: any): obj is SerializedBuffer {
+    return obj && obj.type === 'Buffer' && (Array.isArray(obj.data) || typeof obj.data === 'string');
+}
+
+function reviveBuffers(obj: any): any {
+    if (obj === null || obj === undefined) {
+        return obj;
+    }
+    
+    if (isSerializedBuffer(obj)) {
+        if (Array.isArray(obj.data)) {
+            return Buffer.from(obj.data);
+        } else if (typeof obj.data === 'string') {
+            return Buffer.from(obj.data, 'base64');
+        }
+    }
+    
+    if (Array.isArray(obj)) {
+        return obj.map(item => reviveBuffers(item));
+    }
+    
+    if (typeof obj === 'object') {
+        const result: any = {};
+        for (const key of Object.keys(obj)) {
+            result[key] = reviveBuffers(obj[key]);
+        }
+        return result;
+    }
+    
+    return obj;
+}
+
 export interface QRCodeData {
     schoolId: string;
     qr: string;
@@ -511,18 +548,20 @@ export class WhatsAppTransportManager extends EventEmitter {
                 const dbSession = await whatsappSessionService.loadSession(schoolId);
                 if (dbSession && dbSession.creds?.registered) {
                     console.log(`[WhatsApp] 🔄 Restoring session from database...`);
+                    // Revive Buffer objects that were serialized to JSON
+                    const revivedSession = reviveBuffers(dbSession);
                     // Write DB creds to files
                     const credsPath = path.join(sessionDir, 'creds.json');
-                    fs.writeFileSync(credsPath, JSON.stringify(dbSession.creds));
+                    fs.writeFileSync(credsPath, JSON.stringify(revivedSession.creds));
                     // Also restore keys if available
-                    if (dbSession.keys) {
+                    if (revivedSession.keys) {
                         const keysDir = path.join(sessionDir, 'keys');
                         if (!fs.existsSync(keysDir)) {
                             fs.mkdirSync(keysDir, { recursive: true });
                         }
-                        for (const [keyName, keyValue] of Object.entries(dbSession.keys)) {
+                        for (const [keyName, keyValue] of Object.entries(revivedSession.keys)) {
                             const keyPath = path.join(keysDir, `${keyName}.json`);
-                            fs.writeFileSync(keyPath, JSON.stringify(keyValue));
+                            fs.writeFileSync(keyPath, JSON.stringify(reviveBuffers(keyValue)));
                         }
                     }
                     // Reload state
@@ -543,7 +582,26 @@ export class WhatsAppTransportManager extends EventEmitter {
             await originalSaveCreds();
             // Backup to database
             try {
-                await whatsappSessionService.saveSession(schoolId, { creds: state.creds, keys: {} });
+                const sessionToSave: any = { creds: state.creds, keys: {} };
+                // Get keys from the state.keys store
+                const keyStore = state.keys as any;
+                if (keyStore?.map) {
+                    const keyTypes = ['pre-key', 'session', 'sender-key', 'sender_key_message'];
+                    for (const keyType of keyTypes) {
+                        try {
+                            const keys = await keyStore.map(keyType);
+                            if (keys && keys.size > 0) {
+                                sessionToSave.keys[keyType] = {};
+                                for (const [keyId, keyData] of keys.entries()) {
+                                    sessionToSave.keys[keyType][keyId] = keyData;
+                                }
+                            }
+                        } catch (e) {
+                            // Key type may not exist
+                        }
+                    }
+                }
+                await whatsappSessionService.saveSession(schoolId, sessionToSave);
             } catch (e) {
                 console.log(`[WhatsApp] ⚠️ DB backup failed:`, e.message);
             }
