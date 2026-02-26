@@ -360,33 +360,19 @@ export class Database {
     private convertParams(sql: string, params: any[] = []): { sql: string, params: any[] } {
         let newSql = sql;
         
-        // Convert boolean comparisons from SQLite to PostgreSQL (= 1, = 0)
-        newSql = newSql.replace(/= 1\b/g, '= true').replace(/= 0\b/g, '= false');
-        
-        // Convert boolean literals in VALUES clause (e.g., VALUES (..., 1) -> VALUES (..., true))
-        // Match 1 or 0 that appear after comma or open paren, not inside strings
-        newSql = newSql.replace(/,\s*1\b/g, ', true').replace(/,\s*0\b/g, ', false');
-        newSql = newSql.replace(/\(\s*1\b/g, '(true').replace(/\(\s*0\b/g, '(false');
-        
         // Convert SQLite date functions to PostgreSQL
         newSql = newSql.replace(/datetime\('now'\)/gi, 'NOW()');
         newSql = newSql.replace(/date\('now'\)/gi, 'CURRENT_DATE');
         
         if (params.length === 0) return { sql: newSql, params };
         
-        // Convert boolean parameter values (1 -> true, 0 -> false)
-        const convertedParams = params.map(p => {
-            if (p === 1) return true;
-            if (p === 0) return false;
-            return p;
-        });
-        
+        // Replace ? placeholders with $1, $2, etc.
         let paramIndex = 0;
         newSql = newSql.replace(/\?/g, () => {
             paramIndex++;
             return `$${paramIndex}`;
         });
-        return { sql: newSql, params: convertedParams };
+        return { sql: newSql, params };
     }
 
     public async run(sql: string, params: any[] = []): Promise<{ changes: number; lastInsertRowid: number }> {
