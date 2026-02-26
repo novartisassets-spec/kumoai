@@ -7,12 +7,12 @@ CREATE TABLE IF NOT EXISTS ta_setup_state (
     assigned_class TEXT,
     current_step TEXT,
     completed_steps TEXT DEFAULT '[]', -- JSON array
-    is_active BOOLEAN DEFAULT true,
+    is_active INTEGER DEFAULT 1,
     config_draft TEXT DEFAULT '{}', -- JSON object
     extracted_students TEXT DEFAULT '[]', -- JSON array
     subjects TEXT DEFAULT '[]', -- JSON array
     workload_json TEXT DEFAULT '{}', -- JSON object: { "Class Name": ["Subject1", "Subject2"] }
-    progress_percentage BOOLEAN DEFAULT false, -- Setup progress (0-100)
+    progress_percentage INTEGER DEFAULT 0, -- Setup progress (0-100)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP DEFAULT NULL, -- When teacher finalized setup and became operational

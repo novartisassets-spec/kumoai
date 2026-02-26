@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS setup_state (
     current_step TEXT NOT NULL,
     completed_steps TEXT DEFAULT '[]',
     pending_steps TEXT DEFAULT '[]',
-    is_active BOOLEAN DEFAULT true,
+    is_active INTEGER DEFAULT 1,
     config_draft TEXT DEFAULT '{}',
     last_interaction TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

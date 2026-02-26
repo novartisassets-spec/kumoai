@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS parent_registry (
     parent_access_token TEXT UNIQUE NOT NULL,  -- PAT-KUMO-ABC123DEF456
     token_generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     token_expires_at TIMESTAMP NOT NULL,  -- 24 hours from registration
-    is_active BOOLEAN DEFAULT true,
+    is_active INTEGER DEFAULT 1,
     created_by_admin_phone TEXT,  -- Which admin registered (for audit)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

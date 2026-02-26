@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS teacher_sessions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP NOT NULL,
     last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT true,
+    is_active INTEGER DEFAULT 1,
     context_json TEXT, -- Unified context storage
     
     FOREIGN KEY(teacher_id) REFERENCES users(id),

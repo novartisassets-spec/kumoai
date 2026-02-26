@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS token_access_logs (
     granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP NOT NULL,
     revoked_at TIMESTAMP,
-    is_active BOOLEAN DEFAULT true,
+    is_active INTEGER DEFAULT 1,
     details TEXT
 );
 
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_activity_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_revoked BOOLEAN DEFAULT false
+    is_revoked INTEGER DEFAULT 0
 );
 
 -- Password reset tokens
