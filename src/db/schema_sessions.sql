@@ -37,9 +37,7 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_activity_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_revoked BOOLEAN DEFAULT false,
-    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE
+    is_revoked BOOLEAN DEFAULT false
 );
 
 -- Password reset tokens
@@ -49,8 +47,7 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     token TEXT NOT NULL UNIQUE,
     expires_at TIMESTAMP NOT NULL,
     used_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create indexes

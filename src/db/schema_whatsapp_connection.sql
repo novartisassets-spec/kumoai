@@ -1,22 +1,41 @@
--- WhatsApp Multi-Connection Schema - Safe Migration
--- Add columns one by one with error handling
+-- WhatsApp Multi-Connection Schema - Safe for PostgreSQL
+-- Add columns if they don't exist using DO blocks
 
--- Add connected_whatsapp_jid if not exists
-CREATE TABLE IF NOT EXISTS schools_backup AS SELECT id, name, admin_phone, connected_whatsapp_jid, config_json, created_at, setup_status FROM schools;
-DROP TABLE schools;
-CREATE TABLE schools (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    admin_phone TEXT NOT NULL,
-    admin_name TEXT,
-    connected_whatsapp_jid TEXT,
-    config_json TEXT DEFAULT '{}',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    setup_status TEXT DEFAULT 'PENDING_SETUP',
-    whatsapp_connection_status TEXT DEFAULT 'disconnected',
-    qr_refresh_count BOOLEAN DEFAULT false,
-    qr_refresh_locked_until TIMESTAMP,
-    last_connection_at TIMESTAMP
-);
-INSERT INTO schools SELECT * FROM schools_backup WHERE NOT EXISTS (SELECT 1 FROM schools);
-DROP TABLE schools_backup;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'schools' AND column_name = 'connected_whatsapp_jid') THEN
+        ALTER TABLE schools ADD COLUMN connected_whatsapp_jid TEXT;
+    END IF;
+END $$;
+
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'schools' AND column_name = 'whatsapp_connection_status') THEN
+        ALTER TABLE schools ADD COLUMN whatsapp_connection_status TEXT DEFAULT 'disconnected';
+    END IF;
+END $$;
+
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'schools' AND column_name = 'qr_refresh_count') THEN
+        ALTER TABLE schools ADD COLUMN qr_refresh_count INTEGER DEFAULT 0;
+    END IF;
+END $$;
+
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'schools' AND column_name = 'qr_refresh_locked_until') THEN
+        ALTER TABLE schools ADD COLUMN qr_refresh_locked_until TIMESTAMP;
+    END IF;
+END $$;
+
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'schools' AND column_name = 'last_connection_at') THEN
+        ALTER TABLE schools ADD COLUMN last_connection_at TIMESTAMP;
+    END IF;
+END $$;
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_schools_connection_status ON schools(whatsapp_connection_status);
+CREATE INDEX IF NOT EXISTS idx_schools_admin_phone ON schools(admin_phone);

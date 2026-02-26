@@ -415,18 +415,21 @@ export class WhatsAppTransportManager extends EventEmitter {
                     fs.mkdirSync(sessionDir, { recursive: true });
                 }
                 
+                // Revive Buffer objects before writing to file
+                const revivedSession = reviveBuffers(dbSession);
+                
                 // Write creds to file
-                fs.writeFileSync(credsPath, JSON.stringify(dbSession.creds));
+                fs.writeFileSync(credsPath, JSON.stringify(revivedSession.creds));
                 
                 // Also restore keys if available
-                if (dbSession.keys) {
+                if (revivedSession.keys) {
                     const keysDir = path.join(sessionDir, 'keys');
                     if (!fs.existsSync(keysDir)) {
                         fs.mkdirSync(keysDir, { recursive: true });
                     }
-                    for (const [keyName, keyValue] of Object.entries(dbSession.keys)) {
+                    for (const [keyName, keyValue] of Object.entries(revivedSession.keys)) {
                         const keyPath = path.join(keysDir, `${keyName}.json`);
-                        fs.writeFileSync(keyPath, JSON.stringify(keyValue));
+                        fs.writeFileSync(keyPath, JSON.stringify(reviveBuffers(keyValue)));
                     }
                 }
                 
@@ -527,9 +530,8 @@ export class WhatsAppTransportManager extends EventEmitter {
             await this.clearSessionDir(schoolId);
             await this.createSocket(schoolId, school, sessionDir, phoneNumber);
         } else {
-            // QR: Fresh QR mode
+            // QR: Try to use existing session if available, don't delete on failure
             console.log(`[WhatsApp] 📱 Starting QR mode...`);
-            await this.clearSessionDir(schoolId);
             await this.createSocket(schoolId, school, sessionDir, null);
         }
     }
