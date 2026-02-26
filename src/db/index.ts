@@ -364,6 +364,14 @@ export class Database {
         newSql = newSql.replace(/datetime\('now'\)/gi, 'NOW()');
         newSql = newSql.replace(/date\('now'\)/gi, 'CURRENT_DATE');
         
+        // Convert SQLite datetime('now', '+N minutes/hours/days') to PostgreSQL INTERVAL
+        // datetime('now', '+15 minutes') -> NOW() + INTERVAL '15 minutes'
+        newSql = newSql.replace(/datetime\('now',\s*'([^']+)'\)/gi, (match, interval) => {
+            // Convert SQLite interval format to PostgreSQL
+            const pgInterval = interval.replace(/^(\d+)\s+(minute|hour|day|month|year)s?$/i, '$1 $2');
+            return `NOW() + INTERVAL '${pgInterval}'`;
+        });
+        
         if (params.length === 0) return { sql: newSql, params };
         
         // Replace ? placeholders with $1, $2, etc.

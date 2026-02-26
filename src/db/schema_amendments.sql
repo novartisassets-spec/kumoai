@@ -79,3 +79,8 @@ CREATE INDEX IF NOT EXISTS idx_academic_drafts_subject_class ON academic_drafts(
 
 -- WhatsApp pairing code phone number
 ALTER TABLE schools ADD COLUMN whatsapp_number TEXT;
+
+-- Add missing columns to users table
+ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP;

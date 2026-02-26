@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT,
     email TEXT,
     is_active BOOLEAN DEFAULT true,
+    failed_login_attempts INTEGER DEFAULT 0,
+    last_login_at TIMESTAMP,
+    locked_until TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(school_id) REFERENCES schools(id),
     UNIQUE(phone, school_id)
