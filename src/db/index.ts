@@ -355,9 +355,15 @@ export class Database {
                     await this.executeSQL(statement);
                 } catch (err: any) {
                     const errorMsg = err.message || String(err);
-                    // Only silent skip for duplicate/already exists
-                    if (errorMsg.includes('duplicate') || errorMsg.includes('already exists')) {
-                        // Silent skip for idempotent operations
+                    // Only silent skip for:
+                    // - duplicate/already exists (idempotent operations)
+                    // - relation does not exist (indexes on tables not yet created)
+                    // - column does not exist (indexes on columns not yet created)
+                    if (errorMsg.includes('duplicate') || 
+                        errorMsg.includes('already exists') ||
+                        errorMsg.includes('relation') && errorMsg.includes('does not exist') ||
+                        errorMsg.includes('column') && errorMsg.includes('does not exist')) {
+                        // Silent skip for these harmless errors
                     } else {
                         logger.error({ err, schema: s.name, statement: statement.substring(0, 100) }, 'Failed to execute statement');
                     }
