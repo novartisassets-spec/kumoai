@@ -438,12 +438,15 @@ export class Database {
             return { changes: result.rowCount || 0, lastInsertRowid: 0 };
         } catch (err: any) {
             const errorMsg = err.message || String(err);
-            console.log('[DB] ERROR:', errorMsg);
-            console.log('[DB] Stack:', err.stack);
-            // Only silently ignore "already exists" and "duplicate" errors
-            if (!errorMsg.includes('already exists') && !errorMsg.includes('duplicate')) {
+            // Only silently ignore "already exists" and "duplicate" errors - don't print them
+            const isHarmless = errorMsg.includes('already exists') || errorMsg.includes('duplicate');
+            if (!isHarmless) {
+                console.log('[DB] ERROR:', errorMsg);
+                console.log('[DB] Stack:', err.stack);
+            }
+            // Only log and re-throw if not a harmless error
+            if (!isHarmless) {
                 logger.error({ sql: sql.substring(0, 100), params, error: errorMsg }, 'SQL run error');
-                // Re-throw the error so the caller knows it failed
                 throw err;
             }
             return { changes: 0, lastInsertRowid: 0 };
