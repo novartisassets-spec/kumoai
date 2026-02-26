@@ -563,11 +563,21 @@ export class WhatsAppTransportManager extends EventEmitter {
                 
                 console.log(`[WhatsApp] 🚪 Connection closed: status=${statusCode}, error=${errorMsg}`);
                 
-                // 🔄 Always try to reconnect unless it's an explicit logout
-                // Only stop reconnecting on explicit logout (not connection failures)
-                const isExplicitLogout = statusCode === DisconnectReason.loggedOut || errorMsg?.includes('logged out');
+                // Check if it's an explicit logout (credentials invalid)
+                const isExplicitLogout = statusCode === DisconnectReason.loggedOut || 
+                    errorMsg?.includes('logged out') || 
+                    statusCode === 401;
                 
-                if (!isExplicitLogout) {
+                if (isExplicitLogout) {
+                    // User logged out - clear session so next connection starts fresh
+                    console.log(`[WhatsApp] 🔒 User logged out - clearing session and stopping reconnect`);
+                    this.sockets.delete(schoolId);
+                    
+                    // Clear session files
+                    await this.clearSessionDir(schoolId);
+                    await this.updateConnectionState(schoolId, 'disconnected');
+                } else {
+                    // Connection dropped - try to reconnect with existing session
                     console.log(`[WhatsApp] 🔄 Connection lost - will reconnect automatically...`);
                     this.sockets.delete(schoolId);
                     await this.updateConnectionState(schoolId, 'connecting');
@@ -579,10 +589,6 @@ export class WhatsAppTransportManager extends EventEmitter {
                             console.log(`[WhatsApp] ❌ Reconnect error: ${err.message}`);
                         });
                     }, 5000);
-                } else {
-                    console.log(`[WhatsApp] 🔒 User logged out - stopped reconnecting`);
-                    this.sockets.delete(schoolId);
-                    await this.updateConnectionState(schoolId, 'disconnected');
                 }
             }
         });
