@@ -15,13 +15,39 @@ const BUCKET_NAME = 'whatsapp-sessions';
 export class WhatsAppSessionService {
     private supabase: any = null;
     private initialized: boolean = false;
+    private bucketChecked: boolean = false;
 
     private async getSupabase() {
         if (!this.initialized && supabaseKey) {
             this.supabase = createClient(supabaseUrl, supabaseKey);
             this.initialized = true;
+            
+            // Try to create bucket if it doesn't exist
+            await this.ensureBucket();
         }
         return this.supabase;
+    }
+
+    private async ensureBucket(): Promise<void> {
+        if (this.bucketChecked) return;
+        this.bucketChecked = true;
+        
+        try {
+            // Check if bucket exists
+            const { data: buckets } = await this.supabase.storage.listBuckets();
+            const bucketExists = buckets?.find((b: any) => b.name === BUCKET_NAME);
+            
+            if (!bucketExists) {
+                // Create bucket
+                await this.supabase.storage.createBucket(BUCKET_NAME, {
+                    public: false,
+                    fileSizeLimit: 10485760 // 10MB
+                });
+                logger.info({ bucket: BUCKET_NAME }, 'Created WhatsApp sessions bucket');
+            }
+        } catch (err: any) {
+            logger.warn({ err }, 'Could not ensure bucket exists');
+        }
     }
 
     /**
