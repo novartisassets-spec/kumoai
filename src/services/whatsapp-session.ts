@@ -156,10 +156,15 @@ export class WhatsAppSessionService {
                 .from(BUCKET_NAME)
                 .list(schoolId, { limit: 100 });
 
-            if (listError || !files || files.length === 0) {
-                logger.info({ schoolId }, 'No session found in storage');
+            if (listError) {
+                logger.error({ schoolId, listError }, 'Error listing files from storage');
+            }
+            if (!files || files.length === 0) {
+                logger.info({ schoolId, fileCount: files?.length || 0 }, 'No session found in storage');
                 return null;
             }
+
+            logger.info({ schoolId, fileCount: files.length, files: files.slice(0, 5).map(f => f.name) }, 'Found files in storage');
 
             // Create session directory if needed
             if (!fs.existsSync(sessionDir)) {
