@@ -421,6 +421,12 @@ export class WhatsAppTransportManager extends EventEmitter {
      * Start WhatsApp connection for a specific school
      */
     public async connect(schoolId: string, phoneNumber?: string): Promise<void> {
+        // Prevent multiple simultaneous connect attempts
+        if (this.sockets.has(schoolId)) {
+            console.log(`[WhatsApp] ℹ️ Socket already exists for ${schoolId}, skipping connect`);
+            return;
+        }
+        
         console.log(`\n[WhatsApp] 🔌 connect() for school: ${schoolId}, phone: ${phoneNumber || 'none'}`);
         
         let sessionDir = this.getSessionDir(schoolId);
@@ -617,24 +623,28 @@ export class WhatsAppTransportManager extends EventEmitter {
                 }
             }
             
-            // Handle connection close - just reconnect without clearing session
+            // Handle connection close - only reconnect if not already connected
             if (connection === 'close') {
                 const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
                 const errorMsg = lastDisconnect?.error?.message || 'Unknown';
                 
                 console.log(`[WhatsApp] 🚪 Connection closed: status=${statusCode}, error=${errorMsg}`);
                 
-                // Just reconnect - let Baileys handle session validity
-                console.log(`[WhatsApp] 🔄 Connection lost - will reconnect automatically...`);
+                // Remove socket since connection is closed
                 this.sockets.delete(schoolId);
                 await this.updateConnectionState(schoolId, 'connecting');
                 
-                // Reconnect with delay
+                // Only reconnect if socket is not already active (prevent loops)
                 setTimeout(() => {
-                    console.log(`[WhatsApp] 🔄 Reconnecting now...`);
-                    this.connect(schoolId).catch(err => {
-                        console.log(`[WhatsApp] ❌ Reconnect error: ${err.message}`);
-                    });
+                    // Double-check before reconnecting
+                    if (!this.sockets.has(schoolId)) {
+                        console.log(`[WhatsApp] 🔄 Reconnecting now...`);
+                        this.connect(schoolId).catch(err => {
+                            console.log(`[WhatsApp] ❌ Reconnect error: ${err.message}`);
+                        });
+                    } else {
+                        console.log(`[WhatsApp] ℹ️ Socket already active, skipping reconnect`);
+                    }
                 }, 5000);
             }
         });
