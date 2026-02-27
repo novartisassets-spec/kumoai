@@ -3,7 +3,6 @@ import { logger } from '../utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 import { createClient } from '@supabase/supabase-js';
-import { execSync } from 'child_process';
 
 const supabaseUrl = process.env.SUPABASE_URL || 'https://zmfsigqfvbjsllrklqdy.supabase.co';
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
@@ -55,7 +54,7 @@ export class WhatsAppSessionService {
     }
 
     /**
-     * Save entire auth folder to Supabase Storage (as zip)
+     * Save auth folder to Supabase Storage by copying files individually
      */
     async saveSession(schoolId: string): Promise<void> {
         try {
@@ -74,55 +73,41 @@ export class WhatsAppSessionService {
                 return;
             }
 
-            // Zip the entire auth folder - use temp location
-            const tempDir = '/tmp';
-            const zipPath = `${tempDir}/${schoolId}.zip`;
-            
-            // Remove existing zip if any
-            if (fs.existsSync(zipPath)) {
-                fs.unlinkSync(zipPath);
-            }
-
-            // Create zip using system zip command
-            const parentDir = path.dirname(sessionDir);
-            try {
-                execSync(`cd ${parentDir} && zip -r ${schoolId}.zip ${schoolId}`, { stdio: 'ignore' });
-            } catch (zipErr) {
-                logger.warn({ schoolId, err: zipErr }, 'Zip command failed, trying alternative method');
-                // Fallback: just copy creds.json directly
-                await this.backupCredsDirect(schoolId, sessionDir);
-                return;
-            }
-
-            if (!fs.existsSync(zipPath)) {
-                logger.error({ schoolId }, 'Failed to create zip file');
-                return;
-            }
-
-            // Upload zip to Supabase Storage
             const supabase = await this.getSupabase();
-            if (supabase) {
-                const zipData = fs.readFileSync(zipPath);
-                const { error } = await supabase.storage
-                    .from(BUCKET_NAME)
-                    .upload(`${schoolId}/auth.zip`, zipData, {
-                        upsert: true,
-                        contentType: 'application/zip'
-                    });
+            if (!supabase) return;
 
-                if (error) {
-                    logger.warn({ error: error.message }, 'Failed to backup session to storage');
-                } else {
-                    logger.info({ schoolId }, 'Session folder backed up to Supabase Storage');
+            // Copy all files from session dir to storage
+            const files = fs.readdirSync(sessionDir);
+            for (const file of files) {
+                const filePath = path.join(sessionDir, file);
+                if (fs.statSync(filePath).isFile()) {
+                    const fileData = fs.readFileSync(filePath);
+                    await supabase.storage
+                        .from(BUCKET_NAME)
+                        .upload(`${schoolId}/${file}`, fileData, {
+                            upsert: true,
+                            contentType: 'application/octet-stream'
+                        });
+                } else if (fs.statSync(filePath).isDirectory()) {
+                    // Handle subdirectories (like keys/)
+                    const subfiles = fs.readdirSync(filePath);
+                    for (const subfile of subfiles) {
+                        const subFilePath = path.join(filePath, subfile);
+                        if (fs.statSync(subFilePath).isFile()) {
+                            const subFileData = fs.readFileSync(subFilePath);
+                            await supabase.storage
+                                .from(BUCKET_NAME)
+                                .upload(`${schoolId}/${file}/${subfile}`, subFileData, {
+                                    upsert: true,
+                                    contentType: 'application/octet-stream'
+                                });
+                        }
+                    }
                 }
             }
 
-            // Clean up zip
-            fs.unlinkSync(zipPath);
-            
-            // Update DB record
+            logger.info({ schoolId, fileCount: files.length }, 'Session backed up to Supabase Storage');
             await this.updateDbRecord(schoolId, true);
-            logger.info({ schoolId }, 'WhatsApp session saved');
         } catch (err: any) {
             logger.error({ err, schoolId }, 'Failed to save WhatsApp session');
         }
@@ -131,32 +116,7 @@ export class WhatsAppSessionService {
     /**
      * Fallback: Backup just creds.json directly (when zip unavailable)
      */
-    private async backupCredsDirect(schoolId: string, sessionDir: string): Promise<void> {
-        try {
-            const credsPath = path.join(sessionDir, 'creds.json');
-            if (!fs.existsSync(credsPath)) return;
-
-            const supabase = await this.getSupabase();
-            if (!supabase) return;
-
-            const credsData = fs.readFileSync(credsPath, 'utf-8');
-            const { error } = await supabase.storage
-                .from(BUCKET_NAME)
-                .upload(`${schoolId}/creds.json`, credsData, {
-                    upsert: true,
-                    contentType: 'application/json'
-                });
-
-            if (error) {
-                logger.warn({ error: error.message }, 'Failed to backup creds directly');
-            } else {
-                logger.info({ schoolId }, 'Session creds backed up directly');
-            }
-        } catch (err: any) {
-            logger.warn({ err: err.message }, 'Direct backup failed');
-        }
-    }
-
+    
     /**
      * Load session from Supabase Storage (restore full auth folder)
      */
@@ -179,37 +139,42 @@ export class WhatsAppSessionService {
                 }
             }
 
-            // Try Supabase Storage
+            // Try Supabase Storage - list all files in the school folder
             const supabase = await this.getSupabase();
             if (!supabase) return null;
 
-            const { data, error } = await supabase.storage
+            const { data: files, error: listError } = await supabase.storage
                 .from(BUCKET_NAME)
-                .download(`${schoolId}/auth.zip`);
+                .list(schoolId, { limit: 100 });
 
-            if (error || !data) {
+            if (listError || !files || files.length === 0) {
                 logger.info({ schoolId }, 'No session found in storage');
                 return null;
             }
 
-            // Save zip temporarily
-            const tempDir = '/tmp';
-            const zipPath = `${tempDir}/${schoolId}.zip`;
-            const zipBuffer = Buffer.from(await data.arrayBuffer());
-            fs.writeFileSync(zipPath, zipBuffer);
-
-            // Create session directory parent if needed
-            const parentDir = path.dirname(sessionDir);
-            if (!fs.existsSync(parentDir)) {
-                fs.mkdirSync(parentDir, { recursive: true });
+            // Create session directory if needed
+            if (!fs.existsSync(sessionDir)) {
+                fs.mkdirSync(sessionDir, { recursive: true });
             }
 
-            // Extract zip to parent dir (will extract to kumo_auth_info/{schoolId})
-            execSync(`cd ${parentDir} && unzip -o ${schoolId}.zip`, { stdio: 'ignore' });
+            // Download each file
+            for (const file of files) {
+                const { data, error } = await supabase.storage
+                    .from(BUCKET_NAME)
+                    .download(`${schoolId}/${file.name}`);
 
-            // Clean up zip
-            if (fs.existsSync(zipPath)) {
-                fs.unlinkSync(zipPath);
+                if (!error && data) {
+                    const fileData = Buffer.from(await data.arrayBuffer());
+                    const filePath = path.join(sessionDir, file.name);
+                    
+                    // Handle subdirectories in path
+                    const fileDir = path.dirname(filePath);
+                    if (!fs.existsSync(fileDir)) {
+                        fs.mkdirSync(fileDir, { recursive: true });
+                    }
+                    
+                    fs.writeFileSync(filePath, fileData);
+                }
             }
 
             // Verify creds exist after restore
