@@ -61,8 +61,16 @@ export class WhatsAppSessionService {
         try {
             const sessionDir = this.getSessionDir(schoolId);
             
+            // Check if directory exists
             if (!fs.existsSync(sessionDir)) {
-                logger.warn({ schoolId, sessionDir }, 'No session directory to backup');
+                logger.debug({ schoolId, sessionDir }, 'Session directory does not exist yet, skipping backup');
+                return;
+            }
+
+            // Check if creds.json exists (session not yet created)
+            const credsPath = path.join(sessionDir, 'creds.json');
+            if (!fs.existsSync(credsPath)) {
+                logger.debug({ schoolId, sessionDir }, 'No creds.json yet, skipping backup');
                 return;
             }
 
@@ -77,7 +85,14 @@ export class WhatsAppSessionService {
 
             // Create zip using system zip command
             const parentDir = path.dirname(sessionDir);
-            execSync(`cd ${parentDir} && zip -r ${schoolId}.zip ${schoolId}`, { stdio: 'ignore' });
+            try {
+                execSync(`cd ${parentDir} && zip -r ${schoolId}.zip ${schoolId}`, { stdio: 'ignore' });
+            } catch (zipErr) {
+                logger.warn({ schoolId, err: zipErr }, 'Zip command failed, trying alternative method');
+                // Fallback: just copy creds.json directly
+                await this.backupCredsDirect(schoolId, sessionDir);
+                return;
+            }
 
             if (!fs.existsSync(zipPath)) {
                 logger.error({ schoolId }, 'Failed to create zip file');
@@ -110,6 +125,35 @@ export class WhatsAppSessionService {
             logger.info({ schoolId }, 'WhatsApp session saved');
         } catch (err: any) {
             logger.error({ err, schoolId }, 'Failed to save WhatsApp session');
+        }
+    }
+
+    /**
+     * Fallback: Backup just creds.json directly (when zip unavailable)
+     */
+    private async backupCredsDirect(schoolId: string, sessionDir: string): Promise<void> {
+        try {
+            const credsPath = path.join(sessionDir, 'creds.json');
+            if (!fs.existsSync(credsPath)) return;
+
+            const supabase = await this.getSupabase();
+            if (!supabase) return;
+
+            const credsData = fs.readFileSync(credsPath, 'utf-8');
+            const { error } = await supabase.storage
+                .from(BUCKET_NAME)
+                .upload(`${schoolId}/creds.json`, credsData, {
+                    upsert: true,
+                    contentType: 'application/json'
+                });
+
+            if (error) {
+                logger.warn({ error: error.message }, 'Failed to backup creds directly');
+            } else {
+                logger.info({ schoolId }, 'Session creds backed up directly');
+            }
+        } catch (err: any) {
+            logger.warn({ err: err.message }, 'Direct backup failed');
         }
     }
 

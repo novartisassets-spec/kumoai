@@ -501,6 +501,11 @@ export class WhatsAppTransportManager extends EventEmitter {
      * Simple approach: Files only, let Baileys handle everything
      */
     private async createSocket(schoolId: string, school: any, sessionDir: string, phoneNumber: string | null): Promise<void> {
+        // Ensure session directory exists before Baileys tries to use it
+        if (!fs.existsSync(sessionDir)) {
+            fs.mkdirSync(sessionDir, { recursive: true });
+        }
+        
         // Try to restore from DB first BEFORE creating socket
         let dbSession = null;
         try {
