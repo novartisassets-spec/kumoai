@@ -1239,10 +1239,6 @@ export class WhatsAppTransportManager extends EventEmitter {
             // Disconnect existing connection if any
             await this.disconnect(schoolId);
             
-            // CRITICAL: Clear session directory to ensure fresh keys for the new pairing code
-            // Stale keys often cause WhatsApp to reject pairing codes
-            await this.clearSessionDir(schoolId);
-            
             // Wait for disconnect to complete
             await new Promise(resolve => setTimeout(resolve, 1500));
             
