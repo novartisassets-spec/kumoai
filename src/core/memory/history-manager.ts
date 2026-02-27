@@ -147,9 +147,18 @@ export class HistoryManager {
                         const isAgent = r.action_performed !== null;
                         const role = isAgent ? (r.context || 'AI') : (r.role || 'User');
                         
+                        // Handle invalid timestamps safely
+                        let timestamp: string;
+                        try {
+                            const date = new Date(r.timestamp);
+                            timestamp = isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+                        } catch {
+                            timestamp = new Date().toISOString();
+                        }
+                        
                         return {
                             id: r.id,
-                            timestamp: new Date(r.timestamp).toISOString(),
+                            timestamp,
                             sender_role: role,
                             content: r.body,
                             type: r.type,
