@@ -21,6 +21,7 @@ export class WhatsAppSessionService {
         if (!this.initialized && supabaseKey) {
             this.supabase = createClient(supabaseUrl, supabaseKey);
             this.initialized = true;
+            logger.info({ supabaseUrl, keyPrefix: supabaseKey.substring(0, 10) }, 'Initializing Supabase client');
             await this.ensureBucket();
         }
         return this.supabase;
@@ -30,8 +31,15 @@ export class WhatsAppSessionService {
         if (this.bucketChecked) return;
         this.bucketChecked = true;
         
+        logger.info({ bucket: BUCKET_NAME }, 'Ensuring bucket exists');
+        
         try {
-            const { data: buckets } = await this.supabase.storage.listBuckets();
+            const { data: buckets, error: listError } = await this.supabase.storage.listBuckets();
+            if (listError) {
+                logger.error({ listError }, 'Error listing buckets');
+            }
+            logger.info({ buckets: buckets?.map((b: any) => b.name) }, 'Available buckets');
+            
             const bucketExists = buckets?.find((b: any) => b.name === BUCKET_NAME);
             
             if (!bucketExists) {
@@ -40,6 +48,8 @@ export class WhatsAppSessionService {
                     fileSizeLimit: 52428800 // 50MB - larger for full auth folder
                 });
                 logger.info({ bucket: BUCKET_NAME }, 'Created WhatsApp sessions bucket');
+            } else {
+                logger.info({ bucket: BUCKET_NAME }, 'WhatsApp sessions bucket already exists');
             }
         } catch (err: any) {
             logger.warn({ err }, 'Could not ensure bucket exists');
