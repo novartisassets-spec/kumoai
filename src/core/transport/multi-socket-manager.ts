@@ -486,8 +486,7 @@ export class WhatsAppTransportManager extends EventEmitter {
         } else if (phoneNumber) {
             // PAIRING: Fresh pairing with phone number
             console.log(`[WhatsApp] 🔐 Starting fresh pairing...`);
-            // Clear any old session files
-            await this.clearSessionDir(schoolId);
+            // Don't clear old session - let Baileys handle it
             await this.createSocket(schoolId, school, sessionDir, phoneNumber);
         } else {
             // QR: Try to use existing session if available, don't delete on failure
@@ -618,44 +617,25 @@ export class WhatsAppTransportManager extends EventEmitter {
                 }
             }
             
-            // Handle connection close
+            // Handle connection close - just reconnect without clearing session
             if (connection === 'close') {
                 const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
                 const errorMsg = lastDisconnect?.error?.message || 'Unknown';
                 
                 console.log(`[WhatsApp] 🚪 Connection closed: status=${statusCode}, error=${errorMsg}`);
                 
-                // Check if it's an explicit logout (credentials invalid)
-                // Only clear session on actual logout, not QR expiration or temp network issues
-                const isExplicitLogout = statusCode === DisconnectReason.loggedOut || 
-                    (errorMsg?.toLowerCase().includes('logged out') && !errorMsg?.toLowerCase().includes('connection'));
+                // Just reconnect - let Baileys handle session validity
+                console.log(`[WhatsApp] 🔄 Connection lost - will reconnect automatically...`);
+                this.sockets.delete(schoolId);
+                await this.updateConnectionState(schoolId, 'connecting');
                 
-                if (isExplicitLogout) {
-                    // User logged out - clear session so next connection starts fresh
-                    console.log(`[WhatsApp] 🔒 User logged out - clearing session and stopping reconnect`);
-                    this.sockets.delete(schoolId);
-                    
-                    // Clear session files and DB
-                    await this.clearSessionDir(schoolId);
-                    try {
-                        await whatsappSessionService.deleteSession(schoolId);
-                    } catch {}
-                    await this.updateConnectionState(schoolId, 'disconnected');
-                    return; // Stop reconnecting
-                } else {
-                    // Connection dropped - try to reconnect with existing session
-                    console.log(`[WhatsApp] 🔄 Connection lost - will reconnect automatically...`);
-                    this.sockets.delete(schoolId);
-                    await this.updateConnectionState(schoolId, 'connecting');
-                    
-                    // Reconnect with delay
-                    setTimeout(() => {
-                        console.log(`[WhatsApp] 🔄 Reconnecting now...`);
-                        this.connect(schoolId).catch(err => {
-                            console.log(`[WhatsApp] ❌ Reconnect error: ${err.message}`);
-                        });
-                    }, 5000);
-                }
+                // Reconnect with delay
+                setTimeout(() => {
+                    console.log(`[WhatsApp] 🔄 Reconnecting now...`);
+                    this.connect(schoolId).catch(err => {
+                        console.log(`[WhatsApp] ❌ Reconnect error: ${err.message}`);
+                    });
+                }, 5000);
             }
         });
         
