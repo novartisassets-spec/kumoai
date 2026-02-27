@@ -158,20 +158,23 @@ export class WhatsAppSessionService {
             if (!supabase) return;
 
             if (sessionData.creds) {
-                const binaryData = Buffer.from(JSON.stringify(sessionData.creds));
+                // Use string directly instead of Buffer (more compatible)
+                const credsJson = JSON.stringify(sessionData.creds);
                 const { error } = await supabase.storage
                     .from(BUCKET_NAME)
-                    .upload(`${schoolId}/creds.json`, binaryData, {
+                    .upload(`${schoolId}/creds.json`, credsJson, {
                         upsert: true,
-                        contentType: 'application/octet-stream'
+                        contentType: 'application/json'
                     });
 
                 if (error) {
                     logger.warn({ error: error.message }, 'Failed to backup session to storage');
+                } else {
+                    logger.info({ schoolId }, 'Session backed up to Supabase Storage');
                 }
             }
-        } catch (err) {
-            logger.warn({ err }, 'Storage backup failed');
+        } catch (err: any) {
+            logger.warn({ err: err.message }, 'Storage backup failed');
         }
     }
 
