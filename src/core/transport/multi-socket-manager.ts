@@ -662,18 +662,9 @@ export class WhatsAppTransportManager extends EventEmitter {
                     errorMsg?.includes('logged out') || 
                     statusCode === 401;
                 
-                // Check for WebSocket error that indicates corrupted session
-                const isCorruptedSession = errorMsg?.includes('Buffer') || 
-                    errorMsg?.includes('Uint8Array') ||
-                    statusCode === 408;
-                
-                if (isExplicitLogout || isCorruptedSession) {
-                    // User logged out or session is corrupted - clear session so next connection starts fresh
-                    if (isCorruptedSession) {
-                        console.log(`[WhatsApp] 🔴 Corrupted session detected - clearing and requesting new QR code`);
-                    } else {
-                        console.log(`[WhatsApp] 🔒 User logged out - clearing session and stopping reconnect`);
-                    }
+                if (isExplicitLogout) {
+                    // User logged out - clear session so next connection starts fresh
+                    console.log(`[WhatsApp] 🔒 User logged out - clearing session and stopping reconnect`);
                     this.sockets.delete(schoolId);
                     
                     // Clear session files and DB
