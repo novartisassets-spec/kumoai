@@ -626,9 +626,9 @@ export class WhatsAppTransportManager extends EventEmitter {
                 console.log(`[WhatsApp] 🚪 Connection closed: status=${statusCode}, error=${errorMsg}`);
                 
                 // Check if it's an explicit logout (credentials invalid)
+                // Only clear session on actual logout, not QR expiration or temp network issues
                 const isExplicitLogout = statusCode === DisconnectReason.loggedOut || 
-                    errorMsg?.includes('logged out') || 
-                    statusCode === 401;
+                    (errorMsg?.toLowerCase().includes('logged out') && !errorMsg?.toLowerCase().includes('connection'));
                 
                 if (isExplicitLogout) {
                     // User logged out - clear session so next connection starts fresh
