@@ -80,29 +80,38 @@ export class WhatsAppSessionService {
             const files = fs.readdirSync(sessionDir);
             for (const file of files) {
                 const filePath = path.join(sessionDir, file);
-                if (fs.statSync(filePath).isFile()) {
-                    const fileData = fs.readFileSync(filePath);
-                    await supabase.storage
-                        .from(BUCKET_NAME)
-                        .upload(`${schoolId}/${file}`, fileData, {
-                            upsert: true,
-                            contentType: 'application/octet-stream'
-                        });
-                } else if (fs.statSync(filePath).isDirectory()) {
-                    // Handle subdirectories (like keys/)
-                    const subfiles = fs.readdirSync(filePath);
-                    for (const subfile of subfiles) {
-                        const subFilePath = path.join(filePath, subfile);
-                        if (fs.statSync(subFilePath).isFile()) {
-                            const subFileData = fs.readFileSync(subFilePath);
-                            await supabase.storage
-                                .from(BUCKET_NAME)
-                                .upload(`${schoolId}/${file}/${subfile}`, subFileData, {
-                                    upsert: true,
-                                    contentType: 'application/octet-stream'
-                                });
+                try {
+                    const stat = fs.statSync(filePath);
+                    if (stat.isFile()) {
+                        const fileData = fs.readFileSync(filePath);
+                        await supabase.storage
+                            .from(BUCKET_NAME)
+                            .upload(`${schoolId}/${file}`, fileData, {
+                                upsert: true,
+                                contentType: 'application/octet-stream'
+                            });
+                    } else if (stat.isDirectory()) {
+                        const subfiles = fs.readdirSync(filePath);
+                        for (const subfile of subfiles) {
+                            const subFilePath = path.join(filePath, subfile);
+                            try {
+                                const subStat = fs.statSync(subFilePath);
+                                if (subStat.isFile()) {
+                                    const subFileData = fs.readFileSync(subFilePath);
+                                    await supabase.storage
+                                        .from(BUCKET_NAME)
+                                        .upload(`${schoolId}/${file}/${subfile}`, subFileData, {
+                                            upsert: true,
+                                            contentType: 'application/octet-stream'
+                                        });
+                                }
+                            } catch (e) {
+                                // Subfile doesn't exist, skip
+                            }
                         }
                     }
+                } catch (e) {
+                    // File doesn't exist, skip
                 }
             }
 

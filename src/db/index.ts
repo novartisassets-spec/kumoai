@@ -415,6 +415,10 @@ export class Database {
             return `NOW() + INTERVAL '${pgInterval}'`;
         });
         
+        // Convert SQLite datetime(?, 'unixepoch') to PostgreSQL to_timestamp(?)
+        // datetime(?, 'unixepoch') -> to_timestamp(?)::timestamp
+        newSql = newSql.replace(/datetime\(\?,\s*'unixepoch'\)/gi, 'to_timestamp(?)::timestamp');
+        
         if (params.length === 0) return { sql: newSql, params };
         
         // Replace ? placeholders with $1, $2, etc.
