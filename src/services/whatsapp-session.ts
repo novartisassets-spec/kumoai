@@ -48,10 +48,10 @@ export class WhatsAppSessionService {
     }
 
     /**
-     * Get the local session directory path
+     * Get the local session directory path (must match multi-socket-manager.ts)
      */
     private getSessionDir(schoolId: string): string {
-        return path.join('/tmp', 'whatsapp-sessions', schoolId);
+        return path.resolve('kumo_auth_info', schoolId);
     }
 
     /**
@@ -62,12 +62,13 @@ export class WhatsAppSessionService {
             const sessionDir = this.getSessionDir(schoolId);
             
             if (!fs.existsSync(sessionDir)) {
-                logger.warn({ schoolId }, 'No session directory to backup');
+                logger.warn({ schoolId, sessionDir }, 'No session directory to backup');
                 return;
             }
 
-            // Zip the entire auth folder
-            const zipPath = `/tmp/whatsapp-sessions/${schoolId}.zip`;
+            // Zip the entire auth folder - use temp location
+            const tempDir = '/tmp';
+            const zipPath = `${tempDir}/${schoolId}.zip`;
             
             // Remove existing zip if any
             if (fs.existsSync(zipPath)) {
@@ -75,7 +76,8 @@ export class WhatsAppSessionService {
             }
 
             // Create zip using system zip command
-            execSync(`cd /tmp/whatsapp-sessions && zip -r ${schoolId}.zip ${schoolId}`, { stdio: 'ignore' });
+            const parentDir = path.dirname(sessionDir);
+            execSync(`cd ${parentDir} && zip -r ${schoolId}.zip ${schoolId}`, { stdio: 'ignore' });
 
             if (!fs.existsSync(zipPath)) {
                 logger.error({ schoolId }, 'Failed to create zip file');
@@ -147,17 +149,19 @@ export class WhatsAppSessionService {
             }
 
             // Save zip temporarily
-            const zipPath = `/tmp/whatsapp-sessions/${schoolId}.zip`;
+            const tempDir = '/tmp';
+            const zipPath = `${tempDir}/${schoolId}.zip`;
             const zipBuffer = Buffer.from(await data.arrayBuffer());
             fs.writeFileSync(zipPath, zipBuffer);
 
-            // Create session directory
-            if (!fs.existsSync(sessionDir)) {
-                fs.mkdirSync(sessionDir, { recursive: true });
+            // Create session directory parent if needed
+            const parentDir = path.dirname(sessionDir);
+            if (!fs.existsSync(parentDir)) {
+                fs.mkdirSync(parentDir, { recursive: true });
             }
 
-            // Extract zip
-            execSync(`cd /tmp/whatsapp-sessions && unzip -o ${schoolId}.zip`, { stdio: 'ignore' });
+            // Extract zip to parent dir (will extract to kumo_auth_info/{schoolId})
+            execSync(`cd ${parentDir} && unzip -o ${schoolId}.zip`, { stdio: 'ignore' });
 
             // Clean up zip
             if (fs.existsSync(zipPath)) {
