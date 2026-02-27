@@ -513,48 +513,11 @@ export class WhatsAppTransportManager extends EventEmitter {
         }
         
         // Use file-based auth (Baileys handles everything)
+        // loadSession() already restored the full auth folder from storage to local file
         const { state, saveCreds, ...rest } = await useMultiFileAuthState(sessionDir);
         
-        // If we have a valid DB session, restore it
-        if (dbSession && dbSession.creds?.registered) {
-            try {
-                // Validate that creds are in correct format (not corrupted)
-                const creds = dbSession.creds;
-                let isValid = true;
-                
-                // Check for common corruption patterns
-                if (creds.me && typeof creds.me !== 'object') isValid = false;
-                if (creds.serverToken && typeof creds.serverToken !== 'string') isValid = false;
-                
-                if (!isValid) {
-                    console.log(`[WhatsApp] ⚠️ Session credentials appear corrupted, clearing...`);
-                    await whatsappSessionService.deleteSession(schoolId);
-                    dbSession = null;
-                } else {
-                    console.log(`[WhatsApp] 🔄 Restoring session from database...`);
-                    
-                    // Try to write to file first
-                    try {
-                        const credsPath = path.join(sessionDir, 'creds.json');
-                        fs.writeFileSync(credsPath, JSON.stringify(dbSession.creds));
-                    } catch (e) {
-                        console.log(`[WhatsApp] ⚠️ Could not write creds to file:`, e.message);
-                    }
-                    
-                    // Also update the state object directly - this is the key!
-                    if (dbSession.creds) {
-                        Object.assign(state.creds, dbSession.creds);
-                    }
-                    console.log(`[WhatsApp] ✅ Session restored from database`);
-                }
-            } catch (e) {
-                console.log(`[WhatsApp] ⚠️ DB restore failed:`, e.message);
-                // Delete corrupted session
-                try {
-                    await whatsappSessionService.deleteSession(schoolId);
-                } catch {}
-            }
-        } else {
+        // If no local session, log it
+        if (!dbSession || !dbSession.creds?.registered) {
             console.log(`[WhatsApp] 📁 No existing session found, need to scan QR code`);
         }
         
@@ -562,11 +525,11 @@ export class WhatsAppTransportManager extends EventEmitter {
         const originalSaveCreds = saveCreds;
         const wrappedSaveCreds = async () => {
             await originalSaveCreds();
-            // Backup to database - simple approach
+            // Backup entire auth folder to storage
             try {
-                await whatsappSessionService.saveSession(schoolId, { creds: state.creds });
+                await whatsappSessionService.saveSession(schoolId);
             } catch (e) {
-                console.log(`[WhatsApp] ⚠️ DB backup failed:`, e.message);
+                console.log(`[WhatsApp] ⚠️ Storage backup failed:`, e.message);
             }
         };
         

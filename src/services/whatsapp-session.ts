@@ -3,14 +3,15 @@ import { logger } from '../utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 import { createClient } from '@supabase/supabase-js';
+import { execSync } from 'child_process';
 
 const supabaseUrl = process.env.SUPABASE_URL || 'https://zmfsigqfvbjsllrklqdy.supabase.co';
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
 const BUCKET_NAME = 'whatsapp-sessions';
 
 /**
- * WhatsApp session storage with file-based + Supabase Storage backup
- * This preserves binary data correctly
+ * WhatsApp session storage - stores entire auth folder in Supabase Storage
+ * This preserves all Baileys files (creds.json, keys, etc.) correctly
  */
 export class WhatsAppSessionService {
     private supabase: any = null;
@@ -21,8 +22,6 @@ export class WhatsAppSessionService {
         if (!this.initialized && supabaseKey) {
             this.supabase = createClient(supabaseUrl, supabaseKey);
             this.initialized = true;
-            
-            // Try to create bucket if it doesn't exist
             await this.ensureBucket();
         }
         return this.supabase;
@@ -33,15 +32,13 @@ export class WhatsAppSessionService {
         this.bucketChecked = true;
         
         try {
-            // Check if bucket exists
             const { data: buckets } = await this.supabase.storage.listBuckets();
             const bucketExists = buckets?.find((b: any) => b.name === BUCKET_NAME);
             
             if (!bucketExists) {
-                // Create bucket
                 await this.supabase.storage.createBucket(BUCKET_NAME, {
                     public: false,
-                    fileSizeLimit: 10485760 // 10MB
+                    fileSizeLimit: 52428800 // 50MB - larger for full auth folder
                 });
                 logger.info({ bucket: BUCKET_NAME }, 'Created WhatsApp sessions bucket');
             }
@@ -51,65 +48,134 @@ export class WhatsAppSessionService {
     }
 
     /**
-     * Save session data to local file AND backup to Supabase Storage
+     * Get the local session directory path
      */
-    async saveSession(schoolId: string, sessionData: any): Promise<void> {
+    private getSessionDir(schoolId: string): string {
+        return path.join('/tmp', 'whatsapp-sessions', schoolId);
+    }
+
+    /**
+     * Save entire auth folder to Supabase Storage (as zip)
+     */
+    async saveSession(schoolId: string): Promise<void> {
         try {
-            // Save to local file (for immediate use)
-            const sessionDir = path.join('/tmp', 'whatsapp-sessions', schoolId);
+            const sessionDir = this.getSessionDir(schoolId);
+            
             if (!fs.existsSync(sessionDir)) {
-                fs.mkdirSync(sessionDir, { recursive: true });
+                logger.warn({ schoolId }, 'No session directory to backup');
+                return;
             }
 
-            // Save creds.json locally
-            if (sessionData.creds) {
-                const credsPath = path.join(sessionDir, 'creds.json');
-                fs.writeFileSync(credsPath, JSON.stringify(sessionData.creds));
+            // Zip the entire auth folder
+            const zipPath = `/tmp/whatsapp-sessions/${schoolId}.zip`;
+            
+            // Remove existing zip if any
+            if (fs.existsSync(zipPath)) {
+                fs.unlinkSync(zipPath);
             }
 
-            // Backup to Supabase Storage
-            await this.backupToStorage(schoolId, sessionData);
+            // Create zip using system zip command
+            execSync(`cd /tmp/whatsapp-sessions && zip -r ${schoolId}.zip ${schoolId}`, { stdio: 'ignore' });
+
+            if (!fs.existsSync(zipPath)) {
+                logger.error({ schoolId }, 'Failed to create zip file');
+                return;
+            }
+
+            // Upload zip to Supabase Storage
+            const supabase = await this.getSupabase();
+            if (supabase) {
+                const zipData = fs.readFileSync(zipPath);
+                const { error } = await supabase.storage
+                    .from(BUCKET_NAME)
+                    .upload(`${schoolId}/auth.zip`, zipData, {
+                        upsert: true,
+                        contentType: 'application/zip'
+                    });
+
+                if (error) {
+                    logger.warn({ error: error.message }, 'Failed to backup session to storage');
+                } else {
+                    logger.info({ schoolId }, 'Session folder backed up to Supabase Storage');
+                }
+            }
+
+            // Clean up zip
+            fs.unlinkSync(zipPath);
             
             // Update DB record
             await this.updateDbRecord(schoolId, true);
             logger.info({ schoolId }, 'WhatsApp session saved');
-        } catch (err) {
+        } catch (err: any) {
             logger.error({ err, schoolId }, 'Failed to save WhatsApp session');
         }
     }
 
     /**
-     * Load session from local file first, then try Supabase Storage
+     * Load session from Supabase Storage (restore full auth folder)
      */
     async loadSession(schoolId: string): Promise<any> {
         try {
-            // First try local file
-            const sessionDir = path.join('/tmp', 'whatsapp-sessions', schoolId);
-            const credsPath = path.join(sessionDir, 'creds.json');
+            const sessionDir = this.getSessionDir(schoolId);
 
-            if (fs.existsSync(credsPath)) {
-                const credsData = fs.readFileSync(credsPath, 'utf-8');
-                const creds = JSON.parse(credsData);
-                if (creds?.registered) {
-                    logger.info({ schoolId }, 'WhatsApp session loaded from local file');
-                    return { creds };
+            // Check local first
+            const localCredsPath = path.join(sessionDir, 'creds.json');
+            if (fs.existsSync(localCredsPath)) {
+                try {
+                    const credsData = fs.readFileSync(localCredsPath, 'utf-8');
+                    const creds = JSON.parse(credsData);
+                    if (creds?.registered) {
+                        logger.info({ schoolId }, 'WhatsApp session loaded from local file');
+                        return { creds };
+                    }
+                } catch (e) {
+                    logger.warn({ schoolId }, 'Local creds corrupted, trying storage');
                 }
             }
 
             // Try Supabase Storage
-            const storageSession = await this.loadFromStorage(schoolId);
-            if (storageSession) {
-                // Restore to local file
-                if (!fs.existsSync(sessionDir)) {
-                    fs.mkdirSync(sessionDir, { recursive: true });
+            const supabase = await this.getSupabase();
+            if (!supabase) return null;
+
+            const { data, error } = await supabase.storage
+                .from(BUCKET_NAME)
+                .download(`${schoolId}/auth.zip`);
+
+            if (error || !data) {
+                logger.info({ schoolId }, 'No session found in storage');
+                return null;
+            }
+
+            // Save zip temporarily
+            const zipPath = `/tmp/whatsapp-sessions/${schoolId}.zip`;
+            const zipBuffer = Buffer.from(await data.arrayBuffer());
+            fs.writeFileSync(zipPath, zipBuffer);
+
+            // Create session directory
+            if (!fs.existsSync(sessionDir)) {
+                fs.mkdirSync(sessionDir, { recursive: true });
+            }
+
+            // Extract zip
+            execSync(`cd /tmp/whatsapp-sessions && unzip -o ${schoolId}.zip`, { stdio: 'ignore' });
+
+            // Clean up zip
+            if (fs.existsSync(zipPath)) {
+                fs.unlinkSync(zipPath);
+            }
+
+            // Verify creds exist after restore
+            if (fs.existsSync(localCredsPath)) {
+                const credsData = fs.readFileSync(localCredsPath, 'utf-8');
+                const creds = JSON.parse(credsData);
+                if (creds?.registered) {
+                    logger.info({ schoolId }, 'WhatsApp session restored from storage');
+                    return { creds };
                 }
-                fs.writeFileSync(credsPath, JSON.stringify(storageSession.creds));
-                logger.info({ schoolId }, 'WhatsApp session restored from storage');
-                return storageSession;
             }
 
             return null;
-        } catch (err) {
+        } catch (err: any) {
             logger.error({ err, schoolId }, 'Failed to load WhatsApp session');
             return null;
         }
@@ -121,7 +187,7 @@ export class WhatsAppSessionService {
     async deleteSession(schoolId: string): Promise<void> {
         try {
             // Delete local files
-            const sessionDir = path.join('/tmp', 'whatsapp-sessions', schoolId);
+            const sessionDir = this.getSessionDir(schoolId);
             if (fs.existsSync(sessionDir)) {
                 fs.rmSync(sessionDir, { recursive: true, force: true });
             }
@@ -152,55 +218,6 @@ export class WhatsAppSessionService {
         }
     }
 
-    private async backupToStorage(schoolId: string, sessionData: any): Promise<void> {
-        try {
-            const supabase = await this.getSupabase();
-            if (!supabase) return;
-
-            if (sessionData.creds) {
-                // Use string directly instead of Buffer (more compatible)
-                const credsJson = JSON.stringify(sessionData.creds);
-                const { error } = await supabase.storage
-                    .from(BUCKET_NAME)
-                    .upload(`${schoolId}/creds.json`, credsJson, {
-                        upsert: true,
-                        contentType: 'application/json'
-                    });
-
-                if (error) {
-                    logger.warn({ error: error.message }, 'Failed to backup session to storage');
-                } else {
-                    logger.info({ schoolId }, 'Session backed up to Supabase Storage');
-                }
-            }
-        } catch (err: any) {
-            logger.warn({ err: err.message }, 'Storage backup failed');
-        }
-    }
-
-    private async loadFromStorage(schoolId: string): Promise<any> {
-        try {
-            const supabase = await this.getSupabase();
-            if (!supabase) return null;
-
-            const { data, error } = await supabase.storage
-                .from(BUCKET_NAME)
-                .download(`${schoolId}/creds.json`);
-
-            if (error || !data) return null;
-
-            const text = await data.text();
-            const creds = JSON.parse(text);
-            
-            if (creds?.registered) {
-                return { creds };
-            }
-            return null;
-        } catch (err) {
-            return null;
-        }
-    }
-
     private async deleteFromStorage(schoolId: string): Promise<void> {
         try {
             const supabase = await this.getSupabase();
@@ -208,9 +225,9 @@ export class WhatsAppSessionService {
 
             await supabase.storage
                 .from(BUCKET_NAME)
-                .remove([`${schoolId}/creds.json`]);
+                .remove([`${schoolId}/auth.zip`]);
         } catch (err) {
-            // Ignore errors
+            // Ignore
         }
     }
 
