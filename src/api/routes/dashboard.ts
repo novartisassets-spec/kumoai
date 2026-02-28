@@ -7,6 +7,7 @@ import { Router, Request, Response } from 'express';
 import { logger } from '../../utils/logger';
 import { db } from '../../db';
 import { v4 as uuidv4 } from 'uuid';
+import { whatsappManager } from '../../core/transport/multi-socket-manager';
 
 const router = Router();
 
@@ -124,7 +125,10 @@ router.get('/dashboard/stats', async (req: AuthRequest, res: Response) => {
                 (err, row) => resolve(row)
             );
         });
-        stats.whatsappStatus = schoolInfo?.whatsapp_connection_status || 'disconnected';
+        
+        // Prioritize real-time status from manager
+        const isConnected = whatsappManager.isConnected(schoolId);
+        stats.whatsappStatus = isConnected ? 'connected' : (schoolInfo?.whatsapp_connection_status || 'disconnected');
         stats.setupStatus = schoolInfo?.setup_status || 'PENDING_SETUP';
 
         res.json({

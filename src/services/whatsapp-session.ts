@@ -197,6 +197,44 @@ export class WhatsAppSessionService {
      */
     
     /**
+     * Restore all active sessions from Supabase Storage to local disk
+     * Call this during global application startup
+     */
+    async restoreAllSessions(): Promise<void> {
+        try {
+            logger.info('Starting global WhatsApp session restoration...');
+            
+            // Get all schools that have an active session record
+            const schools: any[] = await new Promise((resolve, reject) => {
+                db.getDB().all(
+                    'SELECT school_id FROM whatsapp_sessions WHERE is_active = 1',
+                    (err, rows) => err ? reject(err) : resolve(rows)
+                );
+            });
+
+            if (schools.length === 0) {
+                logger.info('No WhatsApp sessions found to restore');
+                return;
+            }
+
+            logger.info({ count: schools.length }, `Restoring ${schools.length} WhatsApp sessions from storage...`);
+
+            // Restore each session sequentially to avoid rate limits
+            for (const school of schools) {
+                try {
+                    await this.loadSession(school.school_id);
+                } catch (err) {
+                    logger.error({ err, schoolId: school.school_id }, 'Failed to restore session during global startup');
+                }
+            }
+
+            logger.info('Global WhatsApp session restoration completed');
+        } catch (err) {
+            logger.error({ err }, 'Critical error during global session restoration');
+        }
+    }
+
+    /**
      * Load session from Supabase Storage (restore full auth folder)
      */
     async loadSession(schoolId: string): Promise<any> {
@@ -222,9 +260,10 @@ export class WhatsAppSessionService {
             const supabase = await this.getSupabase();
             if (!supabase) return null;
 
+            // INCREASE LIMIT: Set to 1000 to ensure all Baileys sync files are recovered
             const { data: files, error: listError } = await supabase.storage
                 .from(BUCKET_NAME)
-                .list(schoolId, { limit: 100 });
+                .list(schoolId, { limit: 1000 });
 
             if (listError) {
                 logger.error({ schoolId, listError }, 'Error listing files from storage');

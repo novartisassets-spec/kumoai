@@ -272,10 +272,10 @@ router.get('/connect/:schoolId', async (req: Request, res: Response) => {
         };
 
         const onConnected = (data: { schoolId: string; botJid: string }) => {
-            // Update setup status to IN_PROGRESS when connected
+            // Update setup status to IN_PROGRESS when connected ONLY IF currently PENDING_SETUP
             try {
                 db.getDB().run(
-                    `UPDATE schools SET setup_status = 'IN_PROGRESS' WHERE id = ?`,
+                    `UPDATE schools SET setup_status = 'IN_PROGRESS' WHERE id = ? AND setup_status = 'PENDING_SETUP'`,
                     [schoolId],
                     (err) => {
                         if (err) logger.warn({ err, schoolId }, 'Could not update setup_status');

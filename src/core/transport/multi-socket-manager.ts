@@ -471,7 +471,7 @@ export class WhatsAppTransportManager extends EventEmitter {
         // Get school info
         const school: any = await new Promise((resolve) => {
             db.getDB().get(
-                `SELECT id, name, admin_phone FROM schools WHERE id = ?`,
+                `SELECT id, name, admin_phone, setup_status FROM schools WHERE id = ?`,
                 [schoolId],
                 (err, row) => resolve(row)
             );

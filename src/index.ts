@@ -1,6 +1,7 @@
 import { db } from './db';
 import { logger } from './utils/logger';
 import { whatsappManager } from './core/transport/multi-socket-manager';
+import { whatsappSessionService } from './services/whatsapp-session';
 import { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import fs from 'fs';
@@ -46,6 +47,13 @@ async function main() {
         logger.info('Starting Kumo System...');
 
         await db.init();
+        
+        // RESTORE SESSIONS FIRST: This ensures the filesystem is "warm" before any connections are attempted
+        try {
+            await whatsappSessionService.restoreAllSessions();
+        } catch (restoreErr) {
+            logger.error({ restoreErr }, 'WhatsApp session restoration failed, but starting server anyway');
+        }
 
         // Run WhatsApp connection migration
         try {
