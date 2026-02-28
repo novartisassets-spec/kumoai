@@ -5,13 +5,14 @@ import * as path from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { ENV } from '../config/env';
 
-const supabaseUrl = ENV.SUPABASE_URL;
+// Derive the correct Supabase URL from the project ID used in the database
+const PROJECT_ID = 'zmfzigfqvbjsllrklqdy';
+const supabaseUrl = ENV.SUPABASE_URL || `https://${PROJECT_ID}.supabase.co`;
 const supabaseKey = ENV.SUPABASE_SERVICE_KEY || ENV.SUPABASE_ANON_KEY || '';
 const BUCKET_NAME = 'whatsapp-sessions';
 
 /**
  * WhatsApp session storage - stores entire auth folder in Supabase Storage
- * This preserves all Baileys files (creds.json, keys, etc.) correctly
  */
 export class WhatsAppSessionService {
     private supabase: any = null;
@@ -20,9 +21,19 @@ export class WhatsAppSessionService {
 
     private async getSupabase() {
         if (!this.initialized && supabaseKey) {
-            this.supabase = createClient(supabaseUrl, supabaseKey);
+            // Force the correct URL if it's currently pointing to the typo'd version
+            const finalUrl = supabaseUrl.includes('zmfsigqf') 
+                ? `https://${PROJECT_ID}.supabase.co` 
+                : supabaseUrl;
+
+            this.supabase = createClient(finalUrl, supabaseKey, {
+                auth: {
+                    persistSession: false,
+                    autoRefreshToken: false
+                }
+            });
             this.initialized = true;
-            logger.info({ supabaseUrl, keyPrefix: supabaseKey.substring(0, 10) }, 'Initializing WhatsApp Session Supabase client');
+            logger.info({ supabaseUrl: finalUrl, keyPrefix: supabaseKey.substring(0, 10) }, 'Initializing WhatsApp Session Supabase client');
             await this.ensureBucket();
         }
         return this.supabase;
