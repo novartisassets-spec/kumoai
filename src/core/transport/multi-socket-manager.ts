@@ -493,25 +493,10 @@ export class WhatsAppTransportManager extends EventEmitter {
             // PAIRING: Fresh pairing with phone number
             console.log(`[WhatsApp] 🔐 Starting fresh pairing...`);
             
-            // ✅ CLEAN UP BEFORE FRESH PAIRING: If directory exists but session is NOT registered
-            // we MUST clear it so Baileys starts fresh.
-            if (fs.existsSync(sessionDir) && fs.readdirSync(sessionDir).length > 0) {
-                console.log(`[WhatsApp] 🧹 Clearing stale/unregistered session folder for fresh pairing`);
-                fs.rmSync(sessionDir, { recursive: true, force: true });
-                fs.mkdirSync(sessionDir, { recursive: true });
-            }
-            
             await this.createSocket(schoolId, school, sessionDir, phoneNumber);
         } else {
             // QR: Try to use existing session if available, don't delete on failure
             console.log(`[WhatsApp] 📱 Starting QR mode...`);
-            
-            // Clean up stale session for QR mode too if it's not valid
-            if (fs.existsSync(sessionDir) && fs.readdirSync(sessionDir).length > 0) {
-                console.log(`[WhatsApp] 🧹 Clearing stale/unregistered session folder for fresh QR`);
-                fs.rmSync(sessionDir, { recursive: true, force: true });
-                fs.mkdirSync(sessionDir, { recursive: true });
-            }
             
             await this.createSocket(schoolId, school, sessionDir, null);
         }

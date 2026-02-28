@@ -269,10 +269,9 @@ export class WhatsAppSessionService {
                     logger.info({ schoolId }, 'WhatsApp session restored from storage');
                     return { creds };
                 } else {
-                    // Not registered - wipe the folder so we start fresh next time
-                    // (Baileys requires an empty folder for a clean pairing)
-                    logger.warn({ schoolId }, 'Restored session not registered, wiping folder');
-                    fs.rmSync(sessionDir, { recursive: true, force: true });
+                    // Just return null but leave files - multi-socket-manager will decide what to do
+                    logger.info({ schoolId }, 'Restored session exists but not yet registered');
+                    return null;
                 }
             }
 
