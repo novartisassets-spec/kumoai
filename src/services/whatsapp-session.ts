@@ -110,13 +110,23 @@ export class WhatsAppSessionService {
             }
 
             try {
-                const creds = JSON.parse(fs.readFileSync(credsPath, 'utf-8'));
+                const credsData = fs.readFileSync(credsPath, 'utf-8').trim();
+                if (!credsData) {
+                    logger.debug({ schoolId }, 'creds.json is empty, skipping backup (will retry on next update)');
+                    return;
+                }
+                const creds = JSON.parse(credsData);
                 if (!creds || !creds.registered) {
                     logger.debug({ schoolId }, 'Session not yet registered, skipping cloud backup');
                     return;
                 }
             } catch (e: any) {
-                logger.warn({ schoolId, error: e.message }, 'Failed to parse creds for backup check');
+                // Only log as warning if it's NOT a common JSON parsing error during file-write race conditions
+                if (e instanceof SyntaxError) {
+                    logger.debug({ schoolId, error: e.message }, 'Transient JSON parse error in saveSession (likely file-write race)');
+                } else {
+                    logger.warn({ schoolId, error: e.message }, 'Failed to parse creds for backup check');
+                }
                 return;
             }
 

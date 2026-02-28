@@ -555,11 +555,15 @@ export class WhatsAppTransportManager extends EventEmitter {
         const originalSaveCreds = saveCreds;
         const wrappedSaveCreds = async () => {
             await originalSaveCreds();
-            // Backup entire auth folder to storage
-            try {
-                await whatsappSessionService.saveSession(schoolId);
-            } catch (e) {
-                console.log(`[WhatsApp] ⚠️ Storage backup failed:`, e.message);
+            
+            // ✅ Only perform cloud backup if already connected to avoid race conditions during pairing
+            const state = this.connectionStates.get(schoolId);
+            if (state?.status === 'connected') {
+                try {
+                    await whatsappSessionService.saveSession(schoolId);
+                } catch (e) {
+                    console.log(`[WhatsApp] ⚠️ Storage backup failed:`, e.message);
+                }
             }
         };
         
@@ -631,6 +635,13 @@ export class WhatsAppTransportManager extends EventEmitter {
                     schoolId, 
                     botJid: botJid?.split(':')[0] || botJid 
                 });
+
+                // ✅ TRIGGER INITIAL CLOUD BACKUP: Now that connection is open and stable
+                try {
+                    await whatsappSessionService.saveSession(schoolId);
+                } catch (e) {
+                    console.log(`[WhatsApp] ⚠️ Initial cloud backup failed:`, e.message);
+                }
                 
                 // Send personalized welcome message via SA agent
                 if (school.setup_status === 'PENDING_SETUP' && school.admin_phone) {
