@@ -7,7 +7,7 @@
  */
 
 const RENDER_URLS = [
-  'https://kumoai.onrender.com/api/auth/login',
+  'https://kumoai.onrender.com/api/health',
   'https://kumoai.onrender.com/'
 ];
 
@@ -27,20 +27,18 @@ function getRandomItem(arr: string[]): string {
 }
 
 function getRandomDelay(): number {
-  // Random delay between 5-20 minutes to keep Render awake (it sleeps after 15 min)
-  // Varies each time to avoid detection
-  return Math.floor(Math.random() * 15 * 60 * 1000) + (5 * 60 * 1000);
+  // Random delay between 3-12 minutes to keep Render awake (it sleeps after 15 min)
+  return Math.floor(Math.random() * 9 * 60 * 1000) + (3 * 60 * 1000);
 }
 
 function shouldSkipPing(): boolean {
-  // 20% chance to skip any ping - makes it look more random/organic
-  return Math.random() < 0.2;
+  // Never skip - we want it always online
+  return false;
 }
 
 function isNightTime(): boolean {
-  const now = new Date();
-  const hourInLagos = (now.getUTCHours() + 1 + 24) % 24;
-  return hourInLagos >= NIGHT_START_HOUR || hourInLagos < NIGHT_END_HOUR;
+  // Never sleep - keep it alive 24/7
+  return false;
 }
 
 async function pingRender(): Promise<void> {

@@ -6,8 +6,27 @@ import { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
+import axios from 'axios';
 
 let cleanupService: any = null;
+
+/**
+ * Self-pinger to keep Render alive
+ */
+function startSelfPinger() {
+    const RENDER_EXTERNAL_URL = process.env.RENDER_EXTERNAL_URL || 'https://kumoai.onrender.com';
+    const PING_INTERVAL = 10 * 60 * 1000; // 10 minutes (Render sleeps after 15)
+
+    setInterval(async () => {
+        try {
+            await axios.get(`${RENDER_EXTERNAL_URL}/api/health`);
+            logger.debug({ url: RENDER_EXTERNAL_URL }, 'Self-ping successful');
+        } catch (error: any) {
+            // Silently ignore - even a failed request counts as activity to Render
+            logger.debug({ error: error.message }, 'Self-ping processed');
+        }
+    }, PING_INTERVAL);
+}
 
 async function gracefulShutdown(signal: string) {
     logger.info({ signal }, 'Received shutdown signal');
@@ -390,15 +409,7 @@ async function main() {
             }
         });
 
-        // 2. Authentication Middleware (Applies to all routes below)
-        app.use('/api', authenticateToken);
-
-        // 3. Protected Routes
-        app.use('/api/whatsapp', requireAdmin, whatsappRouter);
-        app.use('/api/setup', requireAdmin, setupRouter);
-        app.use('/api', dashboardRouter);
-
-        // Health check (Now Protected)
+        // 2. Health check (Public - for Render liveness probes)
         app.get('/api/health', (req: Request, res: Response) => {
             res.json({
                 status: 'ok',
@@ -406,6 +417,14 @@ async function main() {
                 activeConnections: whatsappManager.getActiveConnections()
             });
         });
+
+        // 3. Authentication Middleware (Applies to all routes below)
+        app.use('/api', authenticateToken);
+
+        // 4. Protected Routes
+        app.use('/api/whatsapp', requireAdmin, whatsappRouter);
+        app.use('/api/setup', requireAdmin, setupRouter);
+        app.use('/api', dashboardRouter);
 
         // --- Static Files (Frontend) ---
         // Serve static files from frontend dist directory
@@ -454,6 +473,9 @@ async function main() {
         const { getFileCleanupService } = await import('./services/file-cleanup');
         cleanupService = getFileCleanupService();
         cleanupService.start();
+
+        // Start self-pinger to prevent Render hibernation
+        startSelfPinger();
 
         logger.info('Kumo System Running');
 

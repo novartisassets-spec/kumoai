@@ -374,10 +374,13 @@ export class Database {
     }
 
     private async executeSQL(sql: string, retries = 3): Promise<void> {
+        // Ensure SQL is converted (placeholders, date functions) for PostgreSQL
+        const { sql: convertedSql } = this.convertParams(sql, []);
+        
         for (let i = 0; i < retries; i++) {
             try {
                 const pool = await this.getPool();
-                await pool.query(sql);
+                await pool.query(convertedSql);
                 return;
             } catch (err: any) {
                 const errorMsg = err.message || String(err);
@@ -390,8 +393,8 @@ export class Database {
                     await new Promise(r => setTimeout(r, 1000));
                     continue;
                 }
-                // Log and skip other errors
-                logger.debug({ sql: sql.substring(0, 50), error: errorMsg }, 'Statement error (continuing)');
+                // Log and skip other errors - SHOW MORE CONTEXT
+                logger.debug({ sql: convertedSql.substring(0, 300), error: errorMsg }, 'Statement error (continuing)');
                 return;
             }
         }
@@ -443,9 +446,9 @@ export class Database {
     public async run(sql: string, params: any[] = []): Promise<{ changes: number; lastInsertRowid: number }> {
         try {
             const converted = this.convertParams(sql, params);
-            console.log('[DB] Running SQL:', sql.substring(0, 80));
+            console.log('[DB] Running SQL:', sql.substring(0, 500));
             console.log('[DB] Params:', JSON.stringify(params));
-            console.log('[DB] Converted SQL:', converted.sql.substring(0, 80));
+            console.log('[DB] Converted SQL:', converted.sql.substring(0, 500));
             const pool = await this.getPool();
             const result = await pool.query(converted.sql, converted.params);
             console.log('[DB] Result:', result.rowCount);

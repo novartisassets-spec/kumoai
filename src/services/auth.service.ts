@@ -222,7 +222,7 @@ export async function login(credentials: LoginCredentials): Promise<{ user: User
     await new Promise<void>((resolve) => {
         db.getDB().run(
             `INSERT INTO user_sessions (id, user_id, school_id, token_jti, expires_at)
-             VALUES (?, ?, ?, ?, datetime('now', '+15 minutes'))`,
+             VALUES (?, ?, ?, ?, datetime('now', '+3 hours'))`,
             [sessionId, user.id, user.school_id, tokenJti],
             () => resolve()
         );
