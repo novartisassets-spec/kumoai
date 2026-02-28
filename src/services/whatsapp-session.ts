@@ -102,10 +102,21 @@ export class WhatsAppSessionService {
                 return;
             }
 
-            // Check if creds.json exists (session not yet created)
+            // Check if creds.json exists and is registered (valid)
             const credsPath = path.join(sessionDir, 'creds.json');
             if (!fs.existsSync(credsPath)) {
                 logger.debug({ schoolId, sessionDir }, 'No creds.json yet, skipping backup');
+                return;
+            }
+
+            try {
+                const creds = JSON.parse(fs.readFileSync(credsPath, 'utf-8'));
+                if (!creds || !creds.registered) {
+                    logger.debug({ schoolId }, 'Session not yet registered, skipping cloud backup');
+                    return;
+                }
+            } catch (e: any) {
+                logger.warn({ schoolId, error: e.message }, 'Failed to parse creds for backup check');
                 return;
             }
 
@@ -247,6 +258,11 @@ export class WhatsAppSessionService {
                 if (creds?.registered) {
                     logger.info({ schoolId }, 'WhatsApp session restored from storage');
                     return { creds };
+                } else {
+                    // Not registered - wipe the folder so we start fresh next time
+                    // (Baileys requires an empty folder for a clean pairing)
+                    logger.warn({ schoolId }, 'Restored session not registered, wiping folder');
+                    fs.rmSync(sessionDir, { recursive: true, force: true });
                 }
             }
 
@@ -299,11 +315,48 @@ export class WhatsAppSessionService {
             const supabase = await this.getSupabase();
             if (!supabase) return;
 
-            await supabase.storage
+            // 1. List files in the root of the schoolId folder
+            const { data: files } = await supabase.storage
                 .from(BUCKET_NAME)
-                .remove([`${schoolId}/auth.zip`]);
+                .list(schoolId, { limit: 100 });
+
+            if (!files || files.length === 0) return;
+
+            const pathsToRemove: string[] = [];
+
+            for (const file of files) {
+                // If it's a file (metadata exists), add to removal list
+                if (file.id || file.metadata) {
+                    pathsToRemove.push(`${schoolId}/${file.name}`);
+                } else {
+                    // It's a directory (e.g., 'keys/'), list and add its contents
+                    const { data: subfiles } = await supabase.storage
+                        .from(BUCKET_NAME)
+                        .list(`${schoolId}/${file.name}`, { limit: 100 });
+                    
+                    if (subfiles) {
+                        for (const sub of subfiles) {
+                            pathsToRemove.push(`${schoolId}/${file.name}/${sub.name}`);
+                        }
+                    }
+                    // Also try to remove the folder name itself (though remove() usually takes file paths)
+                    pathsToRemove.push(`${schoolId}/${file.name}`);
+                }
+            }
+
+            if (pathsToRemove.length > 0) {
+                const { error } = await supabase.storage
+                    .from(BUCKET_NAME)
+                    .remove(pathsToRemove);
+                
+                if (error) {
+                    logger.warn({ error, schoolId }, 'Partial failure deleting session from storage');
+                } else {
+                    logger.info({ schoolId, fileCount: pathsToRemove.length }, 'Deleted session files from storage');
+                }
+            }
         } catch (err) {
-            // Ignore
+            logger.warn({ err, schoolId }, 'Failed to delete session files from storage');
         }
     }
 

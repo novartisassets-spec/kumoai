@@ -492,11 +492,27 @@ export class WhatsAppTransportManager extends EventEmitter {
         } else if (phoneNumber) {
             // PAIRING: Fresh pairing with phone number
             console.log(`[WhatsApp] 🔐 Starting fresh pairing...`);
-            // Don't clear old session - let Baileys handle it
+            
+            // ✅ CLEAN UP BEFORE FRESH PAIRING: If directory exists but session is NOT registered
+            // we MUST clear it so Baileys starts fresh.
+            if (fs.existsSync(sessionDir) && fs.readdirSync(sessionDir).length > 0) {
+                console.log(`[WhatsApp] 🧹 Clearing stale/unregistered session folder for fresh pairing`);
+                fs.rmSync(sessionDir, { recursive: true, force: true });
+                fs.mkdirSync(sessionDir, { recursive: true });
+            }
+            
             await this.createSocket(schoolId, school, sessionDir, phoneNumber);
         } else {
             // QR: Try to use existing session if available, don't delete on failure
             console.log(`[WhatsApp] 📱 Starting QR mode...`);
+            
+            // Clean up stale session for QR mode too if it's not valid
+            if (fs.existsSync(sessionDir) && fs.readdirSync(sessionDir).length > 0) {
+                console.log(`[WhatsApp] 🧹 Clearing stale/unregistered session folder for fresh QR`);
+                fs.rmSync(sessionDir, { recursive: true, force: true });
+                fs.mkdirSync(sessionDir, { recursive: true });
+            }
+            
             await this.createSocket(schoolId, school, sessionDir, null);
         }
     }
@@ -637,9 +653,11 @@ export class WhatsAppTransportManager extends EventEmitter {
                 // Remove socket since connection is closed
                 this.sockets.delete(schoolId);
                 
-                // If logged out, DO NOT reconnect
+                // If logged out, DO NOT reconnect AND wipe the stale session
                 if (statusCode === DisconnectReason.loggedOut) {
-                    console.log(`[WhatsApp] 🚪 Logged out, stopping auto-reconnect for ${schoolId}`);
+                    console.log(`[WhatsApp] 🚪 Logged out, wiping stale session for ${schoolId}`);
+                    // Use clearSession to wipe local files and Supabase storage
+                    await this.clearSession(schoolId);
                     await this.updateConnectionState(schoolId, 'disconnected');
                     return;
                 }
