@@ -7,7 +7,7 @@
  */
 
 const RENDER_URLS = [
-  'https://kumoai.onrender.com/api/health',
+  'https://kumoai.onrender.com/health',
   'https://kumoai.onrender.com/'
 ];
 

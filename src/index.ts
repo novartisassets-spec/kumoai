@@ -19,7 +19,7 @@ function startSelfPinger() {
 
     setInterval(async () => {
         try {
-            await axios.get(`${RENDER_EXTERNAL_URL}/api/health`);
+            await axios.get(`${RENDER_EXTERNAL_URL}/health`);
             logger.debug({ url: RENDER_EXTERNAL_URL }, 'Self-ping successful');
         } catch (error: any) {
             // Silently ignore - even a failed request counts as activity to Render
@@ -166,6 +166,17 @@ async function main() {
 
         const app = express();
         const isProduction = process.env.NODE_ENV === 'production';
+
+        // 0. Public Health check (Public - for Render liveness probes)
+        // Root path for maximum reliability
+        app.get('/health', (req: Request, res: Response) => {
+            res.json({
+                status: 'ok',
+                timestamp: new Date().toISOString(),
+                activeConnections: whatsappManager.getActiveConnections()
+            });
+        });
+
         const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
             .split(',')
             .map(o => o.trim())
@@ -407,15 +418,6 @@ async function main() {
                 logger.error({ error: error?.message, stack: error?.stack }, '❌ [TEST] PA trigger failed');
                 res.status(500).json({ success: false, error: error.message, stack: error?.stack });
             }
-        });
-
-        // 2. Health check (Public - for Render liveness probes)
-        app.get('/api/health', (req: Request, res: Response) => {
-            res.json({
-                status: 'ok',
-                timestamp: new Date().toISOString(),
-                activeConnections: whatsappManager.getActiveConnections()
-            });
         });
 
         // 3. Authentication Middleware (Applies to all routes below)

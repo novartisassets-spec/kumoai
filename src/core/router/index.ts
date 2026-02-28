@@ -77,7 +77,7 @@ export class MessageRouter {
                         phone: senderPhone,
                         role: effectiveRole,
                         schoolId: schoolId || 'unknown',
-                        userId: senderPhone,
+                        userId: senderIdentity?.userId || undefined,
                         name: senderIdentity?.name || 'Group Member'
                     },
                     senderIdentity: senderIdentity || undefined,
