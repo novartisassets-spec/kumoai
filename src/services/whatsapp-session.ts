@@ -63,11 +63,21 @@ export class WhatsAppSessionService {
         return path.resolve('kumo_auth_info', schoolId);
     }
 
+    private backupLocks: Map<string, number> = new Map();
+    private readonly BACKUP_COOLDOWN = 5000; // 5 seconds
+
     /**
      * Save auth folder to Supabase Storage by copying files individually
      */
     async saveSession(schoolId: string): Promise<void> {
         try {
+            // Throttle backups to prevent "backup storm"
+            const lastBackup = this.backupLocks.get(schoolId) || 0;
+            if (Date.now() - lastBackup < this.BACKUP_COOLDOWN) {
+                return;
+            }
+            this.backupLocks.set(schoolId, Date.now());
+
             const sessionDir = this.getSessionDir(schoolId);
             
             // Check if directory exists
@@ -88,8 +98,14 @@ export class WhatsAppSessionService {
 
             // Copy all files from session dir to storage
             const files = fs.readdirSync(sessionDir);
+            let uploadedCount = 0;
+
             for (const file of files) {
                 const filePath = path.join(sessionDir, file);
+                
+                // Double check existence to prevent ENOENT (Baileys deletes files dynamically)
+                if (!fs.existsSync(filePath)) continue;
+
                 try {
                     const stat = fs.statSync(filePath);
                     if (stat.isFile()) {
@@ -100,10 +116,14 @@ export class WhatsAppSessionService {
                                 upsert: true,
                                 contentType: 'application/octet-stream'
                             });
+                        uploadedCount++;
                     } else if (stat.isDirectory()) {
                         const subfiles = fs.readdirSync(filePath);
                         for (const subfile of subfiles) {
                             const subFilePath = path.join(filePath, subfile);
+                            
+                            if (!fs.existsSync(subFilePath)) continue;
+                            
                             try {
                                 const subStat = fs.statSync(subFilePath);
                                 if (subStat.isFile()) {
@@ -114,19 +134,22 @@ export class WhatsAppSessionService {
                                             upsert: true,
                                             contentType: 'application/octet-stream'
                                         });
+                                    uploadedCount++;
                                 }
                             } catch (e) {
-                                // Subfile doesn't exist, skip
+                                // Subfile doesn't exist or disappeared, skip
                             }
                         }
                     }
                 } catch (e) {
-                    // File doesn't exist, skip
+                    // File doesn't exist or disappeared, skip
                 }
             }
 
-            logger.info({ schoolId, fileCount: files.length }, 'Session backed up to Supabase Storage');
-            await this.updateDbRecord(schoolId, true);
+            if (uploadedCount > 0) {
+                logger.info({ schoolId, fileCount: uploadedCount }, 'Session backed up to Supabase Storage');
+                await this.updateDbRecord(schoolId, true);
+            }
         } catch (err: any) {
             logger.error({ err, schoolId }, 'Failed to save WhatsApp session');
         }

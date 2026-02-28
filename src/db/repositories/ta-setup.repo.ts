@@ -587,7 +587,14 @@ export class TASetupRepository {
                     `SELECT COUNT(*) as count FROM student_attendance_records 
                      WHERE student_id = ? AND school_id = ? AND present = 0 AND marked_date >= date('now', '-30 days')`,
                     [studentId, schoolId],
-                    (err, row: any) => resolve(row?.count || 0)
+                    (err, row: any) => {
+                        if (err) {
+                            logger.error({ err, studentId }, 'Error validating attendance pattern');
+                            resolve(0);
+                        } else {
+                            resolve(row?.count || 0);
+                        }
+                    }
                 );
             });
             

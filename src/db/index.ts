@@ -407,13 +407,23 @@ export class Database {
         newSql = newSql.replace(/datetime\('now'\)/gi, 'NOW()');
         newSql = newSql.replace(/date\('now'\)/gi, 'CURRENT_DATE');
         
-        // Convert SQLite datetime('now', '+N minutes/hours/days') to PostgreSQL INTERVAL
-        // datetime('now', '+15 minutes') -> NOW() + INTERVAL '15 minutes'
-        newSql = newSql.replace(/datetime\('now',\s*'([^']+)'\)/gi, (match, interval) => {
-            // Convert SQLite interval format to PostgreSQL
-            const pgInterval = interval.replace(/^(\d+)\s+(minute|hour|day|month|year)s?$/i, '$1 $2');
-            return `NOW() + INTERVAL '${pgInterval}'`;
+        // Convert SQLite date/datetime('now', '+/-N days/months/years') to PostgreSQL INTERVAL
+        // date('now', '-30 days') -> (CURRENT_DATE - INTERVAL '30 days')
+        // datetime('now', '+15 minutes') -> (NOW() + INTERVAL '15 minutes')
+        const intervalRegex = /(?:date|datetime)\('now',\s*'([-+]?\d+)\s+([^']+)'\)/gi;
+        newSql = newSql.replace(intervalRegex, (match, amount, unit) => {
+            const isNegative = amount.startsWith('-');
+            const absAmount = amount.replace(/[-+]/g, '');
+            const operator = isNegative ? '-' : '+';
+            const base = match.toLowerCase().startsWith('date') ? 'CURRENT_DATE' : 'NOW()';
+            // Standardize unit (remove 's' if present)
+            const cleanUnit = unit.toLowerCase().replace(/s$/, '');
+            return `(${base} ${operator} INTERVAL '${absAmount} ${cleanUnit}')`;
         });
+        
+        // Convert generic date(column) to (column)::date for PostgreSQL
+        // But NOT date('now') which is already handled
+        newSql = newSql.replace(/date\((?!\s*'now'\s*)([^)]+)\)/gi, '($1)::date');
         
         // Convert SQLite datetime(?, 'unixepoch') to PostgreSQL to_timestamp(?)
         // datetime(?, 'unixepoch') -> to_timestamp(?)::timestamp

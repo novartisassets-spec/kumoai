@@ -512,19 +512,23 @@ export class WhatsAppTransportManager extends EventEmitter {
         }
         
         // Try to restore from DB first BEFORE creating socket
+        // loadSession() now correctly downloads files to local filesystem
         let dbSession = null;
         try {
+            console.log(`[WhatsApp] 🔍 Checking Supabase for existing session for ${schoolId}...`);
             dbSession = await whatsappSessionService.loadSession(schoolId);
             if (dbSession && dbSession.creds?.registered) {
-                console.log(`[WhatsApp] 🔄 Found existing session in database, will restore...`);
+                console.log(`[WhatsApp] 🔄 Session found in database and restored to local filesystem.`);
+            } else {
+                console.log(`[WhatsApp] 📁 No existing session found in database.`);
             }
         } catch (e) {
             console.log(`[WhatsApp] ⚠️ Could not check DB for session:`, e.message);
         }
         
         // Use file-based auth (Baileys handles everything)
-        // loadSession() already restored the full auth folder from storage to local file
-        const { state, saveCreds, ...rest } = await useMultiFileAuthState(sessionDir);
+        // loadSession() has now populated the local folder if files existed in storage
+        const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
         
         // If no local session, log it
         if (!dbSession || !dbSession.creds?.registered) {

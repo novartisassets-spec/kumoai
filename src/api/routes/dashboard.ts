@@ -109,7 +109,7 @@ router.get('/dashboard/stats', async (req: AuthRequest, res: Response) => {
         // Current term
         const currentTerm: any = await new Promise((resolve) => {
             db.getDB().get(
-                `SELECT * FROM academic_terms WHERE school_id = ? AND start_date::date <= CURRENT_DATE AND end_date::date >= CURRENT_DATE ORDER BY start_date DESC LIMIT 1`,
+                `SELECT * FROM academic_terms WHERE school_id = ? AND start_date <= date('now') AND end_date >= date('now') ORDER BY start_date DESC LIMIT 1`,
                 [schoolId],
                 (err, row) => resolve(row)
             );
