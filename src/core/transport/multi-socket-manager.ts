@@ -636,20 +636,36 @@ export class WhatsAppTransportManager extends EventEmitter {
                 
                 // Remove socket since connection is closed
                 this.sockets.delete(schoolId);
+                
+                // If logged out, DO NOT reconnect
+                if (statusCode === DisconnectReason.loggedOut) {
+                    console.log(`[WhatsApp] 🚪 Logged out, stopping auto-reconnect for ${schoolId}`);
+                    await this.updateConnectionState(schoolId, 'disconnected');
+                    return;
+                }
+
                 await this.updateConnectionState(schoolId, 'connecting');
                 
-                // Only reconnect if socket is not already active (prevent loops)
-                setTimeout(() => {
-                    // Double-check before reconnecting
-                    if (!this.sockets.has(schoolId)) {
-                        console.log(`[WhatsApp] 🔄 Reconnecting now...`);
-                        this.connect(schoolId).catch(err => {
-                            console.log(`[WhatsApp] ❌ Reconnect error: ${err.message}`);
-                        });
-                    } else {
-                        console.log(`[WhatsApp] ℹ️ Socket already active, skipping reconnect`);
-                    }
-                }, 5000);
+                // Determine if we should auto-reconnect
+                // Only auto-reconnect if it was a "valid" connection failure AND we have a valid session
+                const isRegistered = sock.authState.creds.registered;
+                const shouldAutoReconnect = isRegistered || (statusCode !== 408 && statusCode !== 401);
+
+                if (shouldAutoReconnect) {
+                    setTimeout(() => {
+                        // Double-check before reconnecting
+                        if (!this.sockets.has(schoolId)) {
+                            console.log(`[WhatsApp] 🔄 Reconnecting now...`);
+                            this.connect(schoolId).catch(err => {
+                                console.log(`[WhatsApp] ❌ Reconnect error: ${err.message}`);
+                            });
+                        } else {
+                            console.log(`[WhatsApp] ℹ️ Socket already active, skipping reconnect`);
+                        }
+                    }, 5000);
+                } else {
+                    console.log(`[WhatsApp] ⏸️ Auto-reconnect paused for ${schoolId} (Needs manual intervention or pairing)`);
+                }
             }
         });
         
