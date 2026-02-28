@@ -3,9 +3,10 @@ import { logger } from '../utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 import { createClient } from '@supabase/supabase-js';
+import { ENV } from '../config/env';
 
-const supabaseUrl = process.env.SUPABASE_URL || 'https://zmfsigqfvbjsllrklqdy.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
+const supabaseUrl = ENV.SUPABASE_URL;
+const supabaseKey = ENV.SUPABASE_SERVICE_KEY || ENV.SUPABASE_ANON_KEY || '';
 const BUCKET_NAME = 'whatsapp-sessions';
 
 /**
@@ -21,7 +22,7 @@ export class WhatsAppSessionService {
         if (!this.initialized && supabaseKey) {
             this.supabase = createClient(supabaseUrl, supabaseKey);
             this.initialized = true;
-            logger.info({ supabaseUrl, keyPrefix: supabaseKey.substring(0, 10) }, 'Initializing Supabase client');
+            logger.info({ supabaseUrl, keyPrefix: supabaseKey.substring(0, 10) }, 'Initializing WhatsApp Session Supabase client');
             await this.ensureBucket();
         }
         return this.supabase;
@@ -31,28 +32,32 @@ export class WhatsAppSessionService {
         if (this.bucketChecked) return;
         this.bucketChecked = true;
         
-        logger.info({ bucket: BUCKET_NAME }, 'Ensuring bucket exists');
+        logger.info({ bucket: BUCKET_NAME }, 'Ensuring WhatsApp sessions bucket exists');
         
         try {
             const { data: buckets, error: listError } = await this.supabase.storage.listBuckets();
             if (listError) {
-                logger.error({ listError }, 'Error listing buckets');
+                logger.error({ listError, message: listError.message }, 'Error listing buckets in WhatsApp service');
+                // Don't return, try to create anyway if listing failed
             }
-            logger.info({ buckets: buckets?.map((b: any) => b.name) }, 'Available buckets');
             
             const bucketExists = buckets?.find((b: any) => b.name === BUCKET_NAME);
             
             if (!bucketExists) {
-                await this.supabase.storage.createBucket(BUCKET_NAME, {
+                const { error: createError } = await this.supabase.storage.createBucket(BUCKET_NAME, {
                     public: false,
                     fileSizeLimit: 52428800 // 50MB - larger for full auth folder
                 });
-                logger.info({ bucket: BUCKET_NAME }, 'Created WhatsApp sessions bucket');
+                if (createError) {
+                    logger.warn({ createError, message: createError.message }, 'Could not create bucket (it might already exist)');
+                } else {
+                    logger.info({ bucket: BUCKET_NAME }, 'Created WhatsApp sessions bucket');
+                }
             } else {
                 logger.info({ bucket: BUCKET_NAME }, 'WhatsApp sessions bucket already exists');
             }
         } catch (err: any) {
-            logger.warn({ err }, 'Could not ensure bucket exists');
+            logger.warn({ err, message: err.message }, 'Exception while ensuring bucket exists');
         }
     }
 
