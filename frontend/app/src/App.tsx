@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { authService } from './lib/auth';
 
 import { TeamSection } from './components/TeamSection';
+import { SchoolMarquee } from './components/SchoolMarquee';
 
 // API URL
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -2198,19 +2199,19 @@ function FeaturesPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' 
 
 // Detailed Pricing Page
 function PricingPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' | 'login' | 'contact' | 'docs' | 'faqs' | 'features' | 'pricing') => void }) {
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [currency, setCurrency] = useState<'USD' | 'NGN'>('NGN');
   
   const plans = [
     {
       name: "Free",
-      description: "Try before you buy - 1 term free",
-      monthlyPrice: 0,
-      yearlyPrice: 0,
+      description: "Explore the realm of AI - 1 term free",
+      price: { USD: '0', NGN: '0' },
+      originalPrice: null,
       icon: "Gift",
       color: "from-[#ffd700]/20 via-[#ffed4e]/10 to-transparent",
       features: [
-        "1 class",
-        "1 teacher",
+        "Up to 50 students",
+        "1 teacher account",
         "Unlimited parents",
         "1 academic term (3 months)",
         "WhatsApp support",
@@ -2225,15 +2226,15 @@ function PricingPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' |
     },
     {
       name: "Starter",
-      description: "Perfect for small schools just getting started",
-      monthlyPrice: 49,
-      yearlyPrice: 39,
+      description: "Perfect for growing schools with momentum",
+      price: { USD: '35', NGN: '15,000' },
+      originalPrice: { USD: '45', NGN: '20,000' },
       icon: "Zap",
       color: "from-[#ffd700]/20 via-[#ffed4e]/10 to-transparent",
       features: [
         "Up to 200 students",
         "1 school location",
-        "3 teacher accounts",
+        "5 teacher accounts",
         "Basic reports",
         "WhatsApp support",
         "Email support"
@@ -2247,9 +2248,9 @@ function PricingPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' |
     },
     {
       name: "Professional",
-      description: "Best for growing schools with advanced needs",
-      monthlyPrice: 99,
-      yearlyPrice: 79,
+      description: "The continental standard for excellence",
+      price: { USD: '75', NGN: '35,000' },
+      originalPrice: { USD: '95', NGN: '45,000' },
       icon: "Rocket",
       color: "from-[#7dd3c0]/20 via-[#5fb3a0]/10 to-transparent",
       features: [
@@ -2269,9 +2270,9 @@ function PricingPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' |
     },
     {
       name: "Enterprise",
-      description: "For large school groups and districts",
-      monthlyPrice: null,
-      yearlyPrice: null,
+      description: "For massive institutions and districts",
+      price: { USD: 'Custom', NGN: 'Custom' },
+      originalPrice: null,
       icon: "Building",
       color: "from-[#ffd700]/30 via-[#7dd3c0]/20 to-transparent",
       features: [
@@ -2312,154 +2313,143 @@ function PricingPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' |
         </div>
         <div className="bg-text-blur">PRICE</div>
         <div className="relative z-10 text-center max-w-4xl mx-auto pt-24">
-          <p className="eyebrow mb-4">Pricing</p>
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white mb-6">
-            Simple & <span className="text-[#ffd700]">Transparent</span>
-          </h1>
-          <p className="text-white/60 text-lg max-w-2xl mx-auto">
-            Choose the plan that fits your school. All plans include a 14-day free trial.
-          </p>
-        </div>
-        
-        <div className="absolute left-1/2 bottom-0 -translate-x-1/2 hidden lg:block">
-          <div className="w-96 h-48 animate-float opacity-10">
-            <div className="w-full h-full bg-gradient-to-t from-[#ffd700]/40 to-transparent rounded-full blur-3xl" />
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-[#ffd700]/20 to-transparent border border-[#ffd700]/30 mb-6">
+            <Globe className="w-4 h-4 text-[#ffd700]" />
+            <span className="text-white/80 text-[10px] font-black uppercase tracking-[0.2em]">Continental Deployment Ready</span>
           </div>
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-white mb-6 uppercase tracking-tighter">
+            Smart & <span className="text-[#ffd700]">Scalable</span>
+          </h1>
+          <p className="text-white/50 text-lg max-w-2xl mx-auto font-medium">
+            Deploy advanced AI operations in your school today. Choose your protocol.
+          </p>
         </div>
       </section>
 
-      {/* Billing Toggle */}
+      {/* Currency Switcher */}
       <section className="px-6 pb-12">
-        <div className="max-w-5xl mx-auto flex items-center justify-center gap-4">
-          <span className={`text-sm font-medium ${billingCycle === 'monthly' ? 'text-white' : 'text-white/50'}`}>Monthly</span>
+        <div className="max-w-5xl mx-auto flex items-center justify-center gap-6">
           <button 
-            onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
-            className="relative w-16 h-8 bg-black/50 rounded-full border border-white/20"
+            onClick={() => setCurrency('NGN')}
+            className={`px-8 py-3 rounded-2xl text-xs font-black tracking-widest transition-all duration-500 border ${
+              currency === 'NGN' 
+                ? 'bg-[#ffd700] text-black border-[#ffd700] shadow-2xl shadow-[#ffd700]/20 scale-110' 
+                : 'bg-white/5 text-white/30 border-white/10 hover:border-white/20'
+            }`}
           >
-            <div className={`absolute top-1 w-6 h-6 bg-[#ffd700] rounded-full transition-all ${billingCycle === 'yearly' ? 'left-9' : 'left-1'}`} />
+            NGN (₦)
           </button>
-          <span className={`text-sm font-medium ${billingCycle === 'yearly' ? 'text-white' : 'text-white/50'}`}>
-            Yearly <span className="text-[#ffd700]">(Save 20%)</span>
-          </span>
+          <div className="h-[1px] w-12 bg-white/10" />
+          <button 
+            onClick={() => setCurrency('USD')}
+            className={`px-8 py-3 rounded-2xl text-xs font-black tracking-widest transition-all duration-500 border ${
+              currency === 'USD' 
+                ? 'bg-[#ffd700] text-black border-[#ffd700] shadow-2xl shadow-[#ffd700]/20 scale-110' 
+                : 'bg-white/5 text-white/30 border-white/10 hover:border-white/20'
+            }`}
+          >
+            USD ($)
+          </button>
         </div>
       </section>
 
       {/* Pricing Cards */}
       <section className="py-12 px-6 relative">
-        {/* Background Decorations */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-[#ffd700]/5 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#7dd3c0]/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}} />
-        </div>
-
         <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 relative z-10">
           {plans.map((plan, index) => (
             <div 
               key={index} 
               className={`premium-pricing-card group ${plan.popular ? 'popular' : ''}`}
-              style={{ animationDelay: `${index * 200}ms` }}
             >
-              {/* Blurry Gradient Background */}
               <div className={`absolute inset-0 bg-gradient-to-br ${plan.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl blur-xl`} />
               
-              {/* Card Content */}
-              <div className="relative z-10 p-5 h-full flex flex-col">
-                {/* Popular Badge */}
+              <div className="relative z-10 p-6 h-full flex flex-col">
                 {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#ffd700] text-black px-3 py-0.5 rounded-full text-xs font-bold shadow-lg shadow-[#ffd700]/30">
-                    Most Popular
-                  </div>
-                )}
-                {index === 0 && !plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#7dd3c0] text-black px-3 py-0.5 rounded-full text-xs font-bold shadow-lg shadow-[#7dd3c0]/30">
-                    Free
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#ffd700] text-black px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl shadow-[#ffd700]/30 animate-pulse">
+                    Continental Favorite
                   </div>
                 )}
                 
-                {/* Icon & Title */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${plan.popular ? 'bg-[#ffd700] text-black' : index === 0 ? 'bg-[#7dd3c0] text-black' : 'bg-white/10 text-white'} pricing-icon-3d`}>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${plan.popular ? 'bg-[#ffd700] text-black' : index === 0 ? 'bg-[#7dd3c0] text-black' : 'bg-white/10 text-white'} pricing-icon-3d shadow-xl shadow-black/20`}>
                     {getPlanIcon(plan.icon)}
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-white">{plan.name}</h3>
-                    <p className="text-white/50 text-xs">{plan.description}</p>
+                    <h3 className="text-xl font-black text-white leading-none uppercase tracking-tight">{plan.name}</h3>
+                    <p className="text-[#7dd3c0] text-[10px] font-black uppercase tracking-tighter mt-1">SECURED PROTOCOL</p>
                   </div>
                 </div>
 
-                {/* Price */}
-                <div className="mb-4">
-                  {plan.monthlyPrice !== null ? (
-                    <div className="flex items-baseline gap-1">
-                      {plan.monthlyPrice > 0 && <span className="text-white/50 text-base">$</span>}
-                      <span className="text-3xl font-bold text-white pricing-price-glow">
-                        {billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice}
-                      </span>
-                      {plan.monthlyPrice !== null && plan.monthlyPrice > 0 && <span className="text-white/50 text-sm">/month</span>}
-                      {plan.monthlyPrice !== null && plan.monthlyPrice === 0 && <span className="text-white/50 text-sm">/term</span>}
-                    </div>
-                  ) : (
-                    <div className="text-3xl font-bold text-white pricing-price-glow">Custom</div>
+                <p className="text-white/40 text-xs font-medium leading-relaxed mb-8">{plan.description}</p>
+
+                <div className="mb-8">
+                  {plan.originalPrice && (
+                    <p className="text-white/20 text-xs line-through font-bold mb-1">
+                      {currency === 'NGN' ? '₦' : '$'}{plan.originalPrice[currency]}
+                    </p>
                   )}
-                  {plan.monthlyPrice !== null && plan.monthlyPrice > 0 && billingCycle === 'yearly' && (
-                    <p className="text-[#ffd700] text-xs mt-1 font-medium">Billed annually (${(plan.yearlyPrice || 0) * 12}/year)</p>
-                  )}
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-black text-white tracking-tighter pricing-price-glow uppercase">
+                      {plan.price[currency] === 'Custom' ? '' : (currency === 'NGN' ? '₦' : '$')}
+                      {plan.price[currency]}
+                    </span>
+                    <span className="text-white/30 text-[10px] font-bold uppercase tracking-widest">/term</span>
+                  </div>
                 </div>
 
-                {/* CTA Button */}
                 <button 
-                  onClick={() => plan.monthlyPrice !== null ? onNavigate('signup') : onNavigate('contact')}
-                  className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-all duration-300 mb-4 ${
+                  onClick={() => plan.price.USD !== 'Custom' ? onNavigate('signup') : onNavigate('contact')}
+                  className={`w-full py-3 rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all duration-500 border mb-8 ${
                     plan.popular || index === 0
-                      ? 'bg-[#ffd700] text-black hover:bg-[#ffed4e]' 
-                      : 'bg-white/10 text-white hover:bg-white/20'
+                      ? 'bg-[#ffd700] text-black border-[#ffd700] hover:bg-[#ffed4e] hover:scale-[1.02] shadow-xl shadow-[#ffd700]/10' 
+                      : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:border-white/20'
                   }`}
                 >
-                  {index === 0 ? 'Start Free' : plan.monthlyPrice !== null ? 'Get Started' : 'Contact Sales'}
+                  {index === 0 ? 'Activate Free' : plan.price.USD !== 'Custom' ? 'Initialize Plan' : 'Contact Liaison'}
                 </button>
 
-                {/* Features */}
-                <div className="space-y-2 flex-1">
-                  <p className="text-white font-medium text-xs">What's included:</p>
-                  <ul className="space-y-2">
+                <div className="space-y-3 flex-1">
+                  <p className="text-white/80 font-black text-[10px] uppercase tracking-widest mb-4">Core Modules:</p>
+                  <ul className="space-y-3">
                     {plan.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-2 text-white/70 text-xs">
-                        <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${plan.popular || index === 0 ? 'bg-[#ffd700]/20' : 'bg-white/10'}`}>
-                          <Check className="w-2.5 h-2.5 text-[#ffd700]" />
+                      <li key={i} className="flex items-start gap-3 text-white/60 text-[11px] font-medium leading-snug">
+                        <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${plan.popular || index === 0 ? 'bg-[#ffd700]/20' : 'bg-white/5'}`}>
+                          <Check className={`w-2.5 h-2.5 ${plan.popular || index === 0 ? 'text-[#ffd700]' : 'text-[#7dd3c0]'}`} />
                         </div>
                         {feature}
                       </li>
                     ))}
                   </ul>
-                  
-                  {plan.notIncluded.length > 0 && (
-                    <>
-                      <p className="text-white/40 font-medium text-xs mt-4">Not included:</p>
-                      <ul className="space-y-2">
-                        {plan.notIncluded.map((feature, i) => (
-                          <li key={i} className="flex items-start gap-2 text-white/40 text-xs">
-                            <div className="w-4 h-4 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <X className="w-2.5 h-2.5" />
-                            </div>
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* 3D Academic Element */}
-              <div className="absolute -bottom-2 -right-2 w-16 h-16 opacity-0 group-hover:opacity-100 transition-all duration-500 pricing-3d-element">
-                <div className="w-full h-full bg-gradient-to-br from-black/40 to-black/20 rounded-full blur-sm flex items-center justify-center">
-                  <GraduationCap className="w-8 h-8 text-white/20" />
                 </div>
               </div>
             </div>
           ))}
         </div>
       </section>
+
+      {/* FAQ */}
+      <section className="py-24 px-6 bg-black/20">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-12">Standard Operating <span className="text-[#ffd700]">Procedures</span></h2>
+          <div className="space-y-4 text-left">
+            {[
+              { q: "Can I upgrade protocols mid-term?", a: "Yes. System architecture allows for immediate scaling. Prorated credits apply automatically." },
+              { q: "Is local currency settlement supported?", a: "Direct settlement is available in NGN, GHS, KES, ZAR, and USD via Paystack's secure gateway." },
+              { q: "Technical onboarding duration?", a: "Full deployment typically completes within 30 minutes of protocol activation." }
+            ].map((faq, i) => (
+              <div key={i} className="bg-[#3a3f45]/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 hover:border-[#ffd700]/20 transition-all group">
+                <h3 className="text-white font-bold mb-2 group-hover:text-[#ffd700] transition-colors">{faq.q}</h3>
+                <p className="text-white/50 text-sm leading-relaxed">{faq.a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <SimpleFooter onNavigate={onNavigate} />
+    </div>
+  );
+}
 
       {/* FAQ */}
       <section className="py-24 px-6 bg-black/20">
@@ -5347,7 +5337,7 @@ function App() {
             <HeroSection onNavigate={navigateTo} />
             <FeaturesSection />
             <TeamSection />
-            <HowItWorksSection />
+            <SchoolMarquee />
             <HowItWorksSection />
             <VisionMissionSection />
             <PricingSection />
