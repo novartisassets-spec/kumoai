@@ -2978,10 +2978,10 @@ function DashboardOverview({ onNavigate }: { onNavigate: (page: string) => void 
             {/* Verification Badge */}
             <button 
               onClick={() => !isVerified && setShowVerificationModal(true)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] uppercase tracking-wider font-bold transition-all shadow-sm ${
                 isVerified || schoolInfo?.setupStatus === 'COMPLETED'
-                  ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                  : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 animate-pulse'
+                  ? 'bg-gradient-to-r from-emerald-500/10 to-teal-500/20 text-emerald-400 border border-emerald-500/20' 
+                  : 'bg-gradient-to-r from-amber-500/10 to-orange-500/20 text-amber-400 border border-amber-500/20 animate-pulse'
               }`}
             >
               {isVerified || schoolInfo?.setupStatus === 'COMPLETED' ? (
@@ -4421,108 +4421,211 @@ function RechargePage({ onNavigate: _onNavigate }: { onNavigate: (page: string) 
         </div>
       </div>
 
-            {/* Plans Grid */}
-            {plans.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                {plans.map((plan: any) => {
-                  const Icon = getPlanIcon(plan.name);
-                  const isCurrentPlan = subscription?.plan === plan.name;
-                  const currentCurrency = CURRENCIES.find(c => c.code === currency) || CURRENCIES[0];
-                  
-                  return (
-                    <div
-                      key={plan.name}
-                      className={`
-                        relative rounded-2xl border overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl
-                        ${plan.name === 'Professional' ? 'bg-gradient-to-br from-[#7dd3c0]/20 via-[#5fb3a0]/10 to-transparent' : 'bg-white/5'}
-                        ${plan.name === 'Professional' ? 'border-[#7dd3c0]/30' : 'border-white/10'}
-                        ${plan.name === 'Professional' ? 'ring-2 ring-[#ffd700] ring-offset-2 ring-offset-[#4a4f55]' : ''}
-                      `}
-                    >
-                      {plan.name === 'Professional' && (
-                        <div className="absolute top-0 right-0">
-                          <div className="bg-[#ffd700] text-black text-xs font-bold px-3 py-1 rounded-bl-xl">
-                            POPULAR
-                          </div>
-                        </div>
-                      )}
-      
-                      <div className="p-6 space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                            plan.name === 'Professional' ? 'bg-[#ffd700] text-black' : 'bg-white/10 text-white'
-                          }`}>
-                            <Icon className="w-6 h-6" />
-                          </div>
-                          <div>
-                            <h3 className="text-white font-bold text-lg">{plan.name}</h3>
-                            <p className="text-white/50 text-xs">
-                              {plan.name === 'Free' ? 'Try before you buy' : 
-                               plan.name === 'Enterprise' ? 'For large institutions' : '3 months term'}
-                            </p>
-                          </div>
-                        </div>
-      
-                        <div className="py-4 border-t border-white/10">
-                          {plan.price === 0 || plan.price === null ? (
-                            <div className="text-white font-bold text-2xl">
-                              {plan.name === 'Enterprise' ? 'Custom' : 'Free'}
+                  {/* Plans Grid */}
+
+                  {plans.length > 0 ? (
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+
+                      {plans.map((plan: any) => {
+
+                        const Icon = getPlanIcon(plan.name);
+
+                        const isCurrentPlan = subscription?.plan === plan.name;
+
+                        const currentCurrency = CURRENCIES.find(c => c.code === currency) || CURRENCIES[0];
+
+                        
+
+                        return (
+
+                          <div
+
+                            key={plan.name}
+
+                            className={`
+
+                              relative rounded-2xl border overflow-hidden transition-all duration-300 hover:scale-[1.01] hover:shadow-xl
+
+                              ${plan.name === 'Professional' ? 'bg-gradient-to-br from-[#7dd3c0]/10 via-[#5fb3a0]/5 to-transparent' : 'bg-white/5'}
+
+                              ${plan.name === 'Professional' ? 'border-[#7dd3c0]/30' : 'border-white/10'}
+
+                              ${plan.name === 'Professional' ? 'ring-1 ring-[#ffd700]/50 ring-offset-1 ring-offset-[#4a4f55]' : ''}
+
+                            `}
+
+                          >
+
+                            {plan.name === 'Professional' && (
+
+                              <div className="absolute top-0 right-0">
+
+                                <div className="bg-[#ffd700] text-black text-[10px] font-black px-2 py-0.5 rounded-bl-lg">
+
+                                  POPULAR
+
+                                </div>
+
+                              </div>
+
+                            )}
+
+            
+
+                            <div className="p-4 space-y-3">
+
+                              <div className="flex items-center gap-2.5">
+
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+
+                                  plan.name === 'Professional' ? 'bg-[#ffd700] text-black' : 'bg-white/10 text-white'
+
+                                }`}>
+
+                                  <Icon className="w-5 h-5" />
+
+                                </div>
+
+                                <div>
+
+                                  <h3 className="text-white font-bold text-base leading-tight">{plan.name}</h3>
+
+                                  <p className="text-white/40 text-[10px]">
+
+                                    {plan.name === 'Free' ? 'Try before you buy' : 
+
+                                     plan.name === 'Enterprise' ? 'For large institutions' : '3 months term'}
+
+                                  </p>
+
+                                </div>
+
+                              </div>
+
+            
+
+                              <div className="py-3 border-t border-white/5">
+
+                                {plan.price === 0 || plan.price === null ? (
+
+                                  <div className="text-white font-bold text-xl">
+
+                                    {plan.name === 'Enterprise' ? 'Custom' : 'Free'}
+
+                                  </div>
+
+                                ) : (
+
+                                  <div className="flex items-baseline gap-1">
+
+                                    <span className="text-white font-bold text-2xl tracking-tight">{currentCurrency.symbol}{plan.price?.toLocaleString()}</span>
+
+                                    <span className="text-white/40 text-[10px]">/term</span>
+
+                                  </div>
+
+                                )}
+
+                              </div>
+
+            
+
+                              <ul className="space-y-2 pt-3 border-t border-white/5">
+
+                                {(PLAN_FEATURES[plan.name]?.features || []).map((feature: string, i: number) => (
+
+                                  <li key={i} className="flex items-start gap-2 text-white/60 text-[11px] leading-snug">
+
+                                    <Check className="w-3.5 h-3.5 text-[#7dd3c0] flex-shrink-0 mt-0.5" />
+
+                                    {feature}
+
+                                  </li>
+
+                                ))}
+
+                                {(PLAN_FEATURES[plan.name]?.notIncluded || []).map((feature: string, i: number) => (
+
+                                  <li key={i} className="flex items-start gap-2 text-white/20 text-[11px] line-through leading-snug">
+
+                                    <X className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+
+                                    {feature}
+
+                                  </li>
+
+                                ))}
+
+                              </ul>
+
+            
+
+                              <button
+
+                                onClick={() => handleSubscribe(plan.name)}
+
+                                disabled={isProcessing === plan.name || isCurrentPlan || plan.name === 'Free'}
+
+                                className={`
+
+                                  w-full py-2.5 px-4 rounded-xl font-bold text-xs transition-all duration-300
+
+                                  ${plan.name === 'Professional' 
+
+                                    ? 'bg-[#ffd700] text-black hover:bg-[#ffed4e] shadow-lg shadow-[#ffd700]/10' 
+
+                                    : isCurrentPlan || plan.name === 'Free'
+
+                                      ? 'bg-white/5 text-white/30 cursor-not-allowed border border-white/5'
+
+                                      : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
+
+                                  }
+
+                                  disabled:opacity-50
+
+                                `}
+
+                              >
+
+                                {isProcessing === plan.name ? (
+
+                                  <div className="flex items-center justify-center gap-2">
+
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+
+                                    Processing...
+
+                                  </div>
+
+                                ) : isCurrentPlan ? (
+
+                                  'Current Plan'
+
+                                ) : plan.name === 'Free' ? (
+
+                                  'Free'
+
+                                ) : (
+
+                                  `Upgrade to ${plan.name}`
+
+                                )}
+
+                              </button>
+
                             </div>
-                          ) : (
-                            <div className="flex items-baseline gap-1">
-                              <span className="text-white font-bold text-3xl">{currentCurrency.symbol}{plan.price?.toLocaleString()}</span>
-                              <span className="text-white/50 text-sm">/term</span>
-                            </div>
-                          )}
-                        </div>
-      
-                        <ul className="space-y-3 pt-4 border-t border-white/10">
-                          {(PLAN_FEATURES[plan.name]?.features || []).map((feature: string, i: number) => (
-                            <li key={i} className="flex items-start gap-2 text-white/70 text-sm">
-                              <Check className="w-4 h-4 text-[#7dd3c0] flex-shrink-0 mt-0.5" />
-                              {feature}
-                            </li>
-                          ))}
-                          {(PLAN_FEATURES[plan.name]?.notIncluded || []).map((feature: string, i: number) => (
-                            <li key={i} className="flex items-start gap-2 text-white/30 text-sm line-through">
-                              <X className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                              {feature}
-                            </li>
-                          ))}
-                        </ul>
-      
-                        <button
-                          onClick={() => handleSubscribe(plan.name)}
-                          disabled={isProcessing === plan.name || isCurrentPlan || plan.name === 'Free'}
-                          className={`
-                            w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-300
-                            ${plan.name === 'Professional' 
-                              ? 'bg-[#ffd700] text-black hover:bg-[#ffed4e]' 
-                              : isCurrentPlan || plan.name === 'Free'
-                                ? 'bg-white/10 text-white/50 cursor-not-allowed'
-                                : 'bg-white/10 text-white hover:bg-white/20'
-                            }
-                            disabled:opacity-50
-                          `}
-                        >
-                          {isProcessing === plan.name ? (
-                            <div className="flex items-center justify-center gap-2">
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Processing...
-                            </div>
-                          ) : isCurrentPlan ? (
-                            'Current Plan'
-                          ) : plan.name === 'Free' ? (
-                            'Free'
-                          ) : (
-                            `Subscribe to ${plan.name}`
-                          )}
-                        </button>
-                      </div>
+
+                          </div>
+
+                        );
+
+                      })}
+
                     </div>
-                  );
-                })}
-              </div>
+
+            
             ) : (
               <div className="bg-white/5 rounded-2xl p-12 text-center border border-white/10">
                 <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">

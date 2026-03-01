@@ -20,7 +20,7 @@ if (!JWT_REFRESH_SECRET) {
     throw new Error('FATAL: JWT_REFRESH_SECRET environment variable is required. Set it before starting the server.');
 }
 
-const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutes
+const ACCESS_TOKEN_EXPIRY = '24h'; // Increased from 15m to 24h
 const REFRESH_TOKEN_EXPIRY = '7d'; // 7 days
 
 // Types
@@ -222,7 +222,7 @@ export async function login(credentials: LoginCredentials): Promise<{ user: User
     await new Promise<void>((resolve) => {
         db.getDB().run(
             `INSERT INTO user_sessions (id, user_id, school_id, token_jti, expires_at)
-             VALUES (?, ?, ?, ?, datetime('now', '+3 hours'))`,
+             VALUES (?, ?, ?, ?, datetime('now', '+7 days'))`,
             [sessionId, user.id, user.school_id, tokenJti],
             () => resolve()
         );
@@ -233,7 +233,7 @@ export async function login(credentials: LoginCredentials): Promise<{ user: User
         tokens: {
             accessToken,
             refreshToken,
-            expiresIn: 900 // 15 minutes in seconds
+            expiresIn: 86400 // 24 hours in seconds
         }
     };
 }
@@ -352,7 +352,7 @@ export async function signup(data: SignupData): Promise<{ user: UserPayload; tok
             tokens: {
                 accessToken,
                 refreshToken,
-                expiresIn: 900
+                expiresIn: 86400
             }
         };
     } catch (error: any) {
@@ -397,7 +397,7 @@ export async function refreshTokens(refreshToken: string): Promise<AuthTokens> {
         return {
             accessToken: generateAccessToken(payload),
             refreshToken: generateRefreshToken(user.id),
-            expiresIn: 900
+            expiresIn: 86400
         };
     } catch (error) {
         throw new Error('Invalid refresh token');
