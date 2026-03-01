@@ -2499,20 +2499,30 @@ function SimpleFooter({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' 
 // Chat Support Widget
 // UI COMPONENTS
 
-const VerifiedBadge = ({ className = "w-4 h-4" }: { className?: string }) => (
+const VerifiedBadge = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg 
     viewBox="0 0 24 24" 
-    fill="none" 
-    className={`${className} text-[#0095f6] inline-block ml-1 mb-0.5 verified-badge-premium`}
+    className={`${className} inline-flex items-center justify-center`}
     xmlns="http://www.w3.org/2000/svg"
   >
+    <defs>
+      <linearGradient id="verifiedBadgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#22c55e" />
+        <stop offset="100%" stopColor="#10b981" />
+      </linearGradient>
+      <linearGradient id="verifiedCheckGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#ffffff" />
+        <stop offset="100%" stopColor="#f0fdf4" />
+      </linearGradient>
+    </defs>
+    <circle cx="12" cy="12" r="11" fill="url(#verifiedBadgeGrad)" />
     <path 
-      d="M12 2L10.24 4.03L7.63 3.51L6.26 5.75L3.71 6.13L3.5 8.75L1.5 10.5L3.5 12.25L3.71 14.87L6.26 15.25L7.63 17.49L10.24 16.97L12 19L13.76 16.97L16.37 17.49L17.74 15.25L20.29 14.87L20.5 12.25L22.5 10.5L20.5 8.75L20.29 6.13L17.74 5.75L16.37 3.51L13.76 4.03L12 2Z" 
-      fill="currentColor"
-    />
-    <path 
-      d="M10 14.5L7 11.5L8.41 10.09L10 11.67L15.59 6.09L17 7.5L10 14.5Z" 
-      fill="white"
+      d="M8 12.5L10.5 15L16 9" 
+      stroke="url(#verifiedCheckGrad)" 
+      strokeWidth="2.5" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+      fill="none"
     />
   </svg>
 );
@@ -2665,9 +2675,10 @@ function DashboardLayout({ children, currentPage, onNavigate }: { children: Reac
     onNavigate('login');
   };
 
-  const menuItems = [
+const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'connect', label: 'Connect AI', icon: QrCode, highlight: true },
+    { id: 'recharge', label: 'Recharge', icon: CreditCard, highlight: true },
+    { id: 'connect', label: 'Connect AI', icon: QrCode },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'academics', label: 'Academics', icon: BookOpen },
     { id: 'reports', label: 'Reports', icon: FileText },
@@ -4091,6 +4102,436 @@ function AnalyticsPage({ onNavigate: _onNavigate }: { onNavigate: (page: string)
   );
 }
 
+// Recharge Page - Subscription Plans with Paystack Integration
+function RechargePage({ onNavigate }: { onNavigate: (page: string) => void }) {
+  const { user } = useAuth();
+  const [subscription, setSubscription] = useState<any>(null);
+  const [currency, setCurrency] = useState('NGN');
+  const [plans, setPlans] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
+  const [paymentDetails, setPaymentDetails] = useState<any>(null);
+  const [pollingRef, setPollingRef] = useState<string | null>(null);
+
+  const CURRENCIES = [
+    { code: 'NGN', name: 'Nigerian Naira', symbol: '₦', flag: '🇳🇬' },
+    { code: 'USD', name: 'US Dollar', symbol: '$', flag: '🇺🇸' },
+    { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh', flag: '🇰🇪' },
+    { code: 'GHS', name: 'Ghanaian Cedi', symbol: '₵', flag: '🇬🇭' },
+    { code: 'ZAR', name: 'South African Rand', symbol: 'R', flag: '🇿🇦' },
+    { code: 'UGX', name: 'Ugandan Shilling', symbol: 'USh', flag: '🇺🇬' },
+  ];
+
+  const CURRENCY_SYMBOLS: Record<string, string> = {
+    NGN: '₦', USD: '$', KES: 'KSh', GHS: '₵', ZAR: 'R', UGX: 'USh', XOF: 'CFA'
+  };
+
+  const PLAN_FEATURES: Record<string, { features: string[], notIncluded: string[] }> = {
+    'Free': {
+      features: ['Up to 50 students', '1 class', '1 teacher account', 'Unlimited parents', '1 academic term', 'Basic reports'],
+      notIncluded: ['Multiple classes', 'Advanced analytics', 'API access']
+    },
+    'Starter': {
+      features: ['Up to 200 students', '3 classes', '5 teacher accounts', 'Unlimited parents', 'Full academic year', 'Basic reports', 'WhatsApp support'],
+      notIncluded: ['Advanced analytics', 'API access', 'Custom branding']
+    },
+    'Professional': {
+      features: ['Up to 1,000 students', 'Unlimited classes', 'Unlimited teachers', 'Advanced reports & analytics', 'API access', 'Priority support', 'Custom branding', 'Data export'],
+      notIncluded: ['Dedicated account manager']
+    },
+    'Enterprise': {
+      features: ['Unlimited students', 'Unlimited everything', 'Multi-branch support', 'Custom integrations', 'Dedicated account manager', '24/7 Priority support', 'White-label solution', 'SLA guarantee'],
+      notIncluded: []
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (pollingRef) {
+      interval = setInterval(async () => {
+        try {
+          const result = await authService.verifyPayment(pollingRef);
+          if (result.success && result.data.status === 'success') {
+            clearInterval(interval);
+            setPollingRef(null);
+            setPaymentDetails(null);
+            await loadData();
+            alert(`🎉 Payment successful! You're now on ${result.data.plan} plan!`);
+          }
+        } catch (e) {
+          console.error('Polling error:', e);
+        }
+      }, 5000);
+    }
+    return () => clearInterval(interval);
+  }, [pollingRef]);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const [subResult, plansResult] = await Promise.all([
+        authService.getSubscriptionStatus(),
+        authService.getPlans(currency)
+      ]);
+      
+      if (subResult.success) {
+        setSubscription(subResult.data);
+        setCurrency(subResult.data.currency || 'NGN');
+      }
+      if (plansResult.success) {
+        setPlans(plansResult.data);
+      }
+    } catch (error) {
+      console.error('Failed to load data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCurrencyChange = async (newCurrency: string) => {
+    try {
+      await authService.updateCurrency(newCurrency);
+      setCurrency(newCurrency);
+      const result = await authService.getPlans(newCurrency);
+      if (result.success) {
+        setPlans(result.data);
+      }
+    } catch (error) {
+      console.error('Failed to update currency:', error);
+    }
+  };
+
+  const handleSubscribe = async (planName: string) => {
+    if (planName === 'Free') return;
+    
+    setIsProcessing(planName);
+    try {
+      const result = await authService.initializePayment(planName, currency);
+      
+      if (result.success) {
+        setPaymentDetails({
+          ...result.data,
+          planName
+        });
+        setPollingRef(result.data.reference);
+      } else {
+        alert(result.error || 'Failed to initialize payment');
+      }
+    } catch (error: any) {
+      alert(error.message || 'Payment initialization failed');
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  const cancelPayment = () => {
+    setPaymentDetails(null);
+    setPollingRef(null);
+  };
+
+  const getPlanIcon = (planName: string) => {
+    switch (planName) {
+      case 'Free': return Gift;
+      case 'Starter': return Zap;
+      case 'Professional': return Rocket;
+      case 'Enterprise': return Building;
+      default: return Gift;
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-[#ffd700] mx-auto mb-4" />
+          <p className="text-white/60">Loading subscription...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (paymentDetails) {
+    const currentCurrency = CURRENCIES.find(c => c.code === currency) || CURRENCIES[0];
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        {/* Payment Details Card */}
+        <div className="bg-gradient-to-br from-[#ffd700]/10 to-[#7dd3c0]/10 rounded-2xl p-8 border border-[#ffd700]/30">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 rounded-full bg-[#ffd700]/20 flex items-center justify-center mx-auto mb-4">
+              <Building className="w-8 h-8 text-[#ffd700]" />
+            </div>
+            <h2 className="text-2xl font-bold text-white">Bank Transfer Details</h2>
+            <p className="text-white/60 text-sm mt-2">Transfer the exact amount to the account below</p>
+          </div>
+
+          <div className="bg-black/30 rounded-xl p-6 space-y-4">
+            <div className="flex justify-between items-center py-3 border-b border-white/10">
+              <span className="text-white/60">Plan</span>
+              <span className="text-white font-semibold">{paymentDetails.planName}</span>
+            </div>
+            <div className="flex justify-between items-center py-3 border-b border-white/10">
+              <span className="text-white/60">Amount</span>
+              <span className="text-[#ffd700] font-bold text-2xl">
+                {currentCurrency.symbol}{paymentDetails.amount?.toLocaleString()}
+              </span>
+            </div>
+            <div className="flex justify-between items-center py-3 border-b border-white/10">
+              <span className="text-white/60">Bank</span>
+              <span className="text-white font-semibold">Paystack Virtual Bank</span>
+            </div>
+            <div className="flex justify-between items-center py-3 border-b border-white/10">
+              <span className="text-white/60">Account Number</span>
+              <span className="text-white font-mono font-bold text-xl tracking-wider">
+                {paymentDetails.reference?.slice(0, 10).toUpperCase() || 'PENDING'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center py-3">
+              <span className="text-white/60">Reference</span>
+              <span className="text-white/50 text-xs font-mono">{paymentDetails.reference}</span>
+            </div>
+          </div>
+
+          <div className="mt-6 p-4 bg-[#7dd3c0]/10 rounded-xl border border-[#7dd3c0]/30">
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-[#7dd3c0] mt-2 animate-pulse" />
+              <div>
+                <p className="text-[#7dd3c0] font-medium text-sm">Waiting for payment...</p>
+                <p className="text-white/60 text-xs mt-1">
+                  Make a bank transfer of {currentCurrency.symbol}{paymentDetails.amount?.toLocaleString()} to the account above.
+                  This page will automatically update when payment is confirmed.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <button
+              onClick={cancelPayment}
+              className="flex-1 py-3 px-4 rounded-xl border border-white/20 text-white font-medium hover:bg-white/5 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="flex-1 py-3 px-4 rounded-xl bg-[#ffd700] text-black font-semibold hover:bg-[#ffed4e] transition-all"
+            >
+              I've Paid - Refresh
+            </button>
+          </div>
+        </div>
+
+        {/* Instructions */}
+        <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+          <h3 className="text-white font-semibold mb-4">How to Pay</h3>
+          <ol className="space-y-3 text-white/60 text-sm">
+            <li className="flex gap-3">
+              <span className="w-6 h-6 rounded-full bg-[#ffd700]/20 text-[#ffd700] flex items-center justify-center flex-shrink-0 text-xs font-bold">1</span>
+              <span>Open your bank app (Bank app, USSD, or visit bank)</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="w-6 h-6 rounded-full bg-[#ffd700]/20 text-[#ffd700] flex items-center justify-center flex-shrink-0 text-xs font-bold">2</span>
+              <span>Transfer {currentCurrency.symbol}{paymentDetails.amount?.toLocaleString()} to the account number above</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="w-6 h-6 rounded-full bg-[#ffd700]/20 text-[#ffd700] flex items-center justify-center flex-shrink-0 text-xs font-bold">3</span>
+              <span>Wait for confirmation (usually 1-5 minutes)</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="w-6 h-6 rounded-full bg-[#ffd700]/20 text-[#ffd700] flex items-center justify-center flex-shrink-0 text-xs font-bold">4</span>
+              <span>Your plan will be automatically activated!</span>
+            </li>
+          </ol>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-8">
+      {/* Header */}
+      <div className="text-center space-y-4">
+        <h1 className="text-3xl font-bold text-white">Upgrade Your Plan</h1>
+        <p className="text-white/60 max-w-2xl mx-auto">
+          Choose the perfect plan for your school. Unlock more features and scale as you grow.
+        </p>
+        
+        {/* Currency Selector */}
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <span className="text-white/60 text-sm">Currency:</span>
+          <select
+            value={currency}
+            onChange={(e) => handleCurrencyChange(e.target.value)}
+            className="bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:border-[#ffd700] focus:outline-none"
+          >
+            {CURRENCIES.map(c => (
+              <option key={c.code} value={c.code}>
+                {c.flag} {c.code} - {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Current Plan Banner */}
+      <div className="bg-gradient-to-r from-[#ffd700]/10 via-[#7dd3c0]/10 to-[#ffd700]/10 rounded-2xl p-6 border border-[#ffd700]/20">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <p className="text-white/60 text-sm">Current Plan</p>
+            <p className="text-white font-semibold text-xl flex items-center gap-2">
+              {subscription?.plan || 'Free'}
+              {subscription?.status === 'active' && (
+                <span className="text-xs bg-[#7dd3c0]/20 text-[#7dd3c0] px-2 py-0.5 rounded-full">Active</span>
+              )}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-white/60 text-sm">Expiry Date</p>
+            <p className="text-white font-semibold">{formatDate(subscription?.endDate)}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Plans Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {plans.map((plan: any, index: number) => {
+          const Icon = getPlanIcon(plan.name);
+          const isCurrentPlan = subscription?.plan === plan.name;
+          const currentCurrency = CURRENCIES.find(c => c.code === currency) || CURRENCIES[0];
+          
+          return (
+            <div
+              key={plan.name}
+              className={`
+                relative rounded-2xl border overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl
+                ${plan.name === 'Professional' ? 'bg-gradient-to-br from-[#7dd3c0]/20 via-[#5fb3a0]/10 to-transparent' : 'bg-white/5'}
+                ${plan.name === 'Professional' ? 'border-[#7dd3c0]/30' : 'border-white/10'}
+                ${plan.name === 'Professional' ? 'ring-2 ring-[#ffd700] ring-offset-2 ring-offset-[#4a4f55]' : ''}
+              `}
+            >
+              {plan.name === 'Professional' && (
+                <div className="absolute top-0 right-0">
+                  <div className="bg-[#ffd700] text-black text-xs font-bold px-3 py-1 rounded-bl-xl">
+                    POPULAR
+                  </div>
+                </div>
+              )}
+
+              <div className="p-6 space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                    plan.name === 'Professional' ? 'bg-[#ffd700] text-black' : 'bg-white/10 text-white'
+                  }`}>
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-bold text-lg">{plan.name}</h3>
+                    <p className="text-white/50 text-xs">
+                      {plan.name === 'Free' ? 'Try before you buy' : 
+                       plan.name === 'Enterprise' ? 'For large institutions' : '3 months term'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="py-4 border-t border-white/10">
+                  {plan.price === 0 || plan.price === null ? (
+                    <div className="text-white font-bold text-2xl">
+                      {plan.name === 'Enterprise' ? 'Custom' : 'Free'}
+                    </div>
+                  ) : (
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-white font-bold text-3xl">{currentCurrency.symbol}{plan.price?.toLocaleString()}</span>
+                      <span className="text-white/50 text-sm">/term</span>
+                    </div>
+                  )}
+                </div>
+
+                <ul className="space-y-3 pt-4 border-t border-white/10">
+                  {(PLAN_FEATURES[plan.name]?.features || []).map((feature: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2 text-white/70 text-sm">
+                      <Check className="w-4 h-4 text-[#7dd3c0] flex-shrink-0 mt-0.5" />
+                      {feature}
+                    </li>
+                  ))}
+                  {(PLAN_FEATURES[plan.name]?.notIncluded || []).map((feature: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2 text-white/30 text-sm line-through">
+                      <X className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => handleSubscribe(plan.name)}
+                  disabled={isProcessing === plan.name || isCurrentPlan || plan.name === 'Free'}
+                  className={`
+                    w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-300
+                    ${plan.name === 'Professional' 
+                      ? 'bg-[#ffd700] text-black hover:bg-[#ffed4e]' 
+                      : isCurrentPlan || plan.name === 'Free'
+                        ? 'bg-white/10 text-white/50 cursor-not-allowed'
+                        : 'bg-white/10 text-white hover:bg-white/20'
+                    }
+                    disabled:opacity-50
+                  `}
+                >
+                  {isProcessing === plan.name ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Processing...
+                    </div>
+                  ) : isCurrentPlan ? (
+                    'Current Plan'
+                  ) : plan.name === 'Free' ? (
+                    'Free'
+                  ) : (
+                    `Subscribe to ${plan.name}`
+                  )}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* FAQ Section */}
+      <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+        <h3 className="text-white font-semibold mb-4">Frequently Asked Questions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <p className="text-white/80 text-sm font-medium">How do I pay?</p>
+            <p className="text-white/50 text-xs">Select a plan and you'll receive bank transfer details. Transfer the amount and your plan activates automatically.</p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-white/80 text-sm font-medium">How long does activation take?</p>
+            <p className="text-white/50 text-xs">Usually 1-5 minutes after bank transfer. You'll see a confirmation on screen.</p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-white/80 text-sm font-medium">Can I get a refund?</p>
+            <p className="text-white/50 text-xs">Yes, contact us within 30 days of payment for a full refund.</p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-white/80 text-sm font-medium">What happens when my term ends?</p>
+            <p className="text-white/50 text-xs">You'll be notified 7 days before. You can renew anytime to continue your plan.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Settings Page - School Setup Wizard
 function SettingsPage({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { user } = useAuth();
@@ -4573,13 +5014,14 @@ function App() {
     console.log('[App] Navigation complete, currentPage set to:', page);
   };
 
-  // Dashboard pages
-  if (['dashboard', 'users', 'academics', 'reports', 'analytics', 'settings', 'profile', 'connect'].includes(currentPage)) {
+// Dashboard pages
+  if (['dashboard', 'users', 'academics', 'reports', 'analytics', 'settings', 'profile', 'connect', 'recharge'].includes(currentPage)) {
     console.log('[App] Rendering dashboard page:', currentPage);
     return (
       <ProtectedRoute onNavigate={navigateTo}>
         <DashboardLayout currentPage={currentPage} onNavigate={navigateTo}>
           {currentPage === 'dashboard' && <DashboardOverview onNavigate={navigateTo} />}
+          {currentPage === 'recharge' && <RechargePage onNavigate={navigateTo} />}
           {currentPage === 'connect' && <ConnectAI />}
           {currentPage === 'users' && <UsersPage onNavigate={navigateTo} />}
           {currentPage === 'academics' && <AcademicsPage onNavigate={navigateTo} />}

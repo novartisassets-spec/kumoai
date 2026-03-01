@@ -156,12 +156,13 @@ async function main() {
         const express = require('express');
         const cors = require('cors');
         const cookieParser = require('cookie-parser');
-        const { webhookRouter } = require('./api/webhook-handler');
+const { webhookRouter } = require('./api/webhook-handler');
         const { whatsappRouter } = require('./api/routes/whatsapp');
         const { setupRouter } = require('./api/routes/setup');
         const { authRouter } = require('./api/routes/auth');
         const { dashboardRouter } = require('./api/routes/dashboard');
         const { supportRouter } = require('./api/routes/support');
+        const paymentRouter = require('./api/routes/payment').default || require('./api/routes/payment');
         const { authenticateToken, requireAdmin } = require('./api/middleware/auth.middleware');
 
         const app = express();
@@ -223,10 +224,60 @@ async function main() {
 
         // --- API Routes ---
         
-        // 1. Public Routes (No Authentication)
+// 1. Public Routes (No Authentication)
         app.use('/api/webhooks', webhookRouter);
         app.use('/api/auth', authRouter);
         app.use('/api/support', supportRouter);
+        
+        // Paystack Webhook - Public endpoint for Paystack callbacks
+        app.post('/api/payment/webhook', async (req: Request, res: Response) => {
+            try {
+                const event = req.body;
+                const { logger } = require('./utils/logger');
+                const { db } = require('./db');
+
+                if (event.event === 'charge.success') {
+                    const { reference, amount, currency, metadata } = event.data;
+                    const { school_id, plan_name, term_months } = metadata || {};
+
+                    if (school_id && plan_name) {
+                        const paymentAmount = amount / 100;
+
+                        await new Promise<void>((resolve, reject) => {
+                            db.getDB().run(
+                                `UPDATE subscription_payments 
+                                SET payment_status = 'success', paid_at = CURRENT_TIMESTAMP, payment_method = 'bank_transfer'
+                                WHERE transaction_ref = ?`,
+                                [reference],
+                                (err: any) => err ? reject(err) : resolve()
+                            );
+                        });
+
+                        const startDate = new Date();
+                        const endDate = new Date();
+                        endDate.setMonth(endDate.getMonth() + (term_months || 3));
+
+                        await new Promise<void>((resolve, reject) => {
+                            db.getDB().run(
+                                `UPDATE schools 
+                                SET subscription_plan = ?, subscription_status = 'active', 
+                                    subscription_start_date = ?, subscription_end_date = ?
+                                WHERE id = ?`,
+                                [plan_name, startDate, endDate, school_id],
+                                (err: any) => err ? reject(err) : resolve()
+                            );
+                        });
+
+                        logger.info({ school_id, plan_name, amount: paymentAmount }, 'Payment webhook processed successfully');
+                    }
+                }
+
+                res.json({ success: true });
+            } catch (error) {
+                console.error('Webhook processing failed:', error);
+                res.status(500).json({ success: false, error: 'Webhook processing failed' });
+            }
+        });
 
         // TEST ENDPOINT: Trigger SA Flow (No Auth - must be before authenticateToken)
         app.post('/api/test/trigger-sa', async (req: Request, res: Response) => {
@@ -423,9 +474,10 @@ async function main() {
         // 3. Authentication Middleware (Applies to all routes below)
         app.use('/api', authenticateToken);
 
-        // 4. Protected Routes
+// 4. Protected Routes
         app.use('/api/whatsapp', requireAdmin, whatsappRouter);
         app.use('/api/setup', requireAdmin, setupRouter);
+        app.use('/api/payment', paymentRouter);
         app.use('/api', dashboardRouter);
 
         // --- Static Files (Frontend) ---
