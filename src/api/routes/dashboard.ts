@@ -8,6 +8,7 @@ import { logger } from '../../utils/logger';
 import { db } from '../../db';
 import { v4 as uuidv4 } from 'uuid';
 import { whatsappManager } from '../../core/transport/multi-socket-manager';
+import { SubscriptionService } from '../../services/subscription.service';
 
 const router = Router();
 
@@ -120,7 +121,8 @@ router.get('/dashboard/stats', async (req: AuthRequest, res: Response) => {
         // WhatsApp connection status
         const schoolInfo: any = await new Promise((resolve) => {
             db.getDB().get(
-                `SELECT whatsapp_connection_status, setup_status FROM schools WHERE id = ?`,
+                `SELECT whatsapp_connection_status, setup_status, subscription_plan, subscription_status, subscription_end_date 
+                 FROM schools WHERE id = ?`,
                 [schoolId],
                 (err, row) => resolve(row)
             );
@@ -130,6 +132,11 @@ router.get('/dashboard/stats', async (req: AuthRequest, res: Response) => {
         const isConnected = whatsappManager.isConnected(schoolId);
         stats.whatsappStatus = isConnected ? 'connected' : (schoolInfo?.whatsapp_connection_status || 'disconnected');
         stats.setupStatus = schoolInfo?.setup_status || 'PENDING_SETUP';
+        stats.subscription = {
+            plan: schoolInfo?.subscription_plan || 'Free',
+            status: schoolInfo?.subscription_status || 'active',
+            endDate: schoolInfo?.subscription_end_date || null
+        };
 
         res.json({
             success: true,
@@ -318,6 +325,28 @@ router.post('/students', async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ success: false, error: 'Name and class level are required' });
         }
 
+        // --- PLAN ENFORCEMENT ---
+        const studentLimit = await SubscriptionService.checkLimit(schoolId, 'students');
+        if (!studentLimit.allowed) {
+            return res.status(403).json({ 
+                success: false, 
+                error: `Plan limit reached. You have ${studentLimit.current} students. Upgrade your plan to add more.` 
+            });
+        }
+
+        // Also check classes limit if this is a new class
+        const existingClass = await db.get(`SELECT 1 FROM students WHERE school_id = ? AND class_level = ? LIMIT 1`, [schoolId, classLevel]);
+        if (!existingClass) {
+            const classLimit = await SubscriptionService.checkLimit(schoolId, 'classes');
+            if (!classLimit.allowed) {
+                return res.status(403).json({ 
+                    success: false, 
+                    error: `Plan limit reached. Your current plan allows only ${classLimit.limit} classes. Upgrade to add more.` 
+                });
+            }
+        }
+        // ------------------------
+
         const studentId = uuidv4();
         const accessCode = parentAccessCode || Math.random().toString(36).substring(2, 8).toUpperCase();
 
@@ -442,6 +471,16 @@ router.post('/teachers', async (req: AuthRequest, res: Response) => {
         if (!name || !phone) {
             return res.status(400).json({ success: false, error: 'Name and phone are required' });
         }
+
+        // --- PLAN ENFORCEMENT ---
+        const teacherLimit = await SubscriptionService.checkLimit(schoolId, 'teachers');
+        if (!teacherLimit.allowed) {
+            return res.status(403).json({ 
+                success: false, 
+                error: `Plan limit reached. You have ${teacherLimit.current} teachers. Upgrade your plan to add more.` 
+            });
+        }
+        // ------------------------
 
         // Check if phone already exists in school
         const existing: any = await new Promise((resolve) => {

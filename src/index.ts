@@ -7,6 +7,8 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
+import crypto from 'crypto';
+import { SubscriptionService } from './services/subscription.service';
 
 let cleanupService: any = null;
 
@@ -232,49 +234,46 @@ const { webhookRouter } = require('./api/webhook-handler');
         // Paystack Webhook - Public endpoint for Paystack callbacks
         app.post('/api/payment/webhook', async (req: Request, res: Response) => {
             try {
+                // 1. Verify Paystack Signature
+                const secret = process.env.PAYSTACK_SECRET_KEY || '';
+                const signature = req.headers['x-paystack-signature'] as string;
+                
+                if (!signature) {
+                    logger.warn('Webhook received without signature');
+                    return res.status(400).send('No signature');
+                }
+
+                const hash = crypto.createHmac('sha512', secret)
+                                   .update(JSON.stringify(req.body))
+                                   .digest('hex');
+
+                if (hash !== signature) {
+                    logger.error({ signature, expected: hash }, 'Invalid webhook signature');
+                    return res.status(400).send('Invalid signature');
+                }
+
                 const event = req.body;
-                const { logger } = require('./utils/logger');
-                const { db } = require('./db');
+                logger.info({ event: event.event, reference: event.data?.reference }, '📩 Paystack Webhook Received');
 
                 if (event.event === 'charge.success') {
-                    const { reference, amount, currency, metadata } = event.data;
+                    const { reference, metadata } = event.data;
                     const { school_id, plan_name, term_months } = metadata || {};
 
                     if (school_id && plan_name) {
-                        const paymentAmount = amount / 100;
-
-                        await new Promise<void>((resolve, reject) => {
-                            db.getDB().run(
-                                `UPDATE subscription_payments 
-                                SET payment_status = 'success', paid_at = CURRENT_TIMESTAMP, payment_method = 'bank_transfer'
-                                WHERE transaction_ref = ?`,
-                                [reference],
-                                (err: any) => err ? reject(err) : resolve()
-                            );
-                        });
-
-                        const startDate = new Date();
-                        const endDate = new Date();
-                        endDate.setMonth(endDate.getMonth() + (term_months || 3));
-
-                        await new Promise<void>((resolve, reject) => {
-                            db.getDB().run(
-                                `UPDATE schools 
-                                SET subscription_plan = ?, subscription_status = 'active', 
-                                    subscription_start_date = ?, subscription_end_date = ?
-                                WHERE id = ?`,
-                                [plan_name, startDate, endDate, school_id],
-                                (err: any) => err ? reject(err) : resolve()
-                            );
-                        });
-
-                        logger.info({ school_id, plan_name, amount: paymentAmount }, 'Payment webhook processed successfully');
+                        await SubscriptionService.handlePaymentSuccess(
+                            reference, 
+                            school_id, 
+                            plan_name, 
+                            term_months || 3
+                        );
+                    } else {
+                        logger.warn({ reference, metadata }, 'Webhook success missing metadata');
                     }
                 }
 
                 res.json({ success: true });
-            } catch (error) {
-                console.error('Webhook processing failed:', error);
+            } catch (error: any) {
+                logger.error({ error: error.message }, 'Webhook processing failed');
                 res.status(500).json({ success: false, error: 'Webhook processing failed' });
             }
         });

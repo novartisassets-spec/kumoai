@@ -95,6 +95,9 @@ const SETUP_VALIDATOR = {
     }
 };
 
+import { ActionHandlerRegistry } from '../../core/action-handler-registry';
+import { SubscriptionService } from '../../services/subscription.service';
+
 export class SchoolAdminAgent extends BaseAgent {
     /**
      * 🔐 PHASE 1: ROLE-BASED ACCESS CONTROL
@@ -1930,6 +1933,13 @@ export class SchoolAdminAgent extends BaseAgent {
                 return { success: false, error: `A teacher with phone ${normalizedPhone} is already registered.` };
             }
 
+            // --- PLAN ENFORCEMENT ---
+            const teacherLimit = await SubscriptionService.checkLimit(schoolId, 'teachers');
+            if (!teacherLimit.allowed) {
+                return { success: false, error: `Plan limit reached. Your school has ${teacherLimit.current} teachers. Please upgrade your plan to register more teachers.` };
+            }
+            // ------------------------
+
             const teacherId = uuidv4();
             const token = SETUP_VALIDATOR.generateTeacherToken();
             
@@ -2032,6 +2042,22 @@ This will allow you to start entering marks and managing students.`;
                 if (existingStudent) {
                     return { success: false, error: `A student named "${student_name}" is already registered in ${classValidation.normalized}.` };
                 }
+
+                // --- PLAN ENFORCEMENT ---
+                const studentLimit = await SubscriptionService.checkLimit(schoolId, 'students');
+                if (!studentLimit.allowed) {
+                    return { success: false, error: `Plan limit reached. Your school has ${studentLimit.current} students. Please upgrade your plan to register more students.` };
+                }
+
+                // Also check classes limit if this is a new class
+                const existingClass = await db.get(`SELECT 1 FROM students WHERE school_id = ? AND class_level = ? LIMIT 1`, [schoolId, classValidation.normalized]);
+                if (!existingClass) {
+                    const classLimit = await SubscriptionService.checkLimit(schoolId, 'classes');
+                    if (!classLimit.allowed) {
+                        return { success: false, error: `Plan limit reached. Your current plan allows only ${classLimit.limit} classes. Upgrade your plan to add more classes.` };
+                    }
+                }
+                // ------------------------
     
                 // 1. Generate Student ID first (needed for parent registration)
                 const studentId = DataValidator.generateStudentId(student_name, classValidation.normalized || targetClass, normalizedPhone);

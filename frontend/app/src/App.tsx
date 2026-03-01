@@ -2965,7 +2965,14 @@ function DashboardOverview({ onNavigate }: { onNavigate: (page: string) => void 
                   {schoolInfo?.name || 'My School'}
                   <VerifiedBadge className="w-5 h-5" />
                 </h2>
-                <p className="text-white/50 text-xs">ID: {schoolInfo?.id?.slice(0, 12) || 'SCH-000'}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-white/50 text-xs">ID: {schoolInfo?.id?.slice(0, 12) || 'SCH-000'}</p>
+                  {stats?.subscription?.plan && (
+                    <span className="px-1.5 py-0.5 bg-[#ffd700]/20 text-[#ffd700] text-[10px] font-bold rounded border border-[#ffd700]/30 uppercase">
+                      {stats.subscription.plan}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             {/* Verification Badge */}
