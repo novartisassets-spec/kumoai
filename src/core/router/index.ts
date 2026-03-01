@@ -77,7 +77,7 @@ export class MessageRouter {
                         phone: senderPhone,
                         role: effectiveRole,
                         schoolId: schoolId || 'unknown',
-                        userId: senderIdentity?.userId || undefined,
+                        userId: undefined,
                         name: senderIdentity?.name || 'Group Member'
                     },
                     senderIdentity: senderIdentity || undefined,
@@ -159,7 +159,7 @@ export class MessageRouter {
                 if (isAdmin) {
                     logger.info({ phone: normalizedFrom, schoolId }, '🛡️ [ROUTER] Admin detected during setup - forcing SA context');
                     identity = {
-                        userId: 'admin-' + normalizedFrom,
+                        userId: undefined,
                         phone: normalizedFrom,
                         role: 'admin',
                         schoolId: schoolId,
@@ -214,7 +214,7 @@ export class MessageRouter {
                     phone: normalizedFrom,
                     role: 'parent',
                     schoolId: schoolId,
-                    userId: msg.from,
+                    userId: undefined,
                     name: learnedName
                 },
                 schoolId,

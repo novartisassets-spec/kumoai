@@ -394,7 +394,7 @@ export class Database {
                     continue;
                 }
                 // Log and skip other errors - SHOW MORE CONTEXT
-                logger.debug({ sql: convertedSql.substring(0, 300), error: errorMsg }, 'Statement error (continuing)');
+                logger.error({ sql: convertedSql.substring(0, 300), error: errorMsg }, 'Statement error (continuing)');
                 return;
             }
         }
