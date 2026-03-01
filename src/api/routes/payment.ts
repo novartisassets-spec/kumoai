@@ -1,4 +1,4 @@
-import { Router, Response, Request } from 'express';
+import { Router, Response } from 'express';
 import { db } from '../../db';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
@@ -21,7 +21,8 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   NGN: '₦', USD: '$', KES: 'KSh', GHS: '₵', ZAR: 'R', UGX: 'USh', XOF: 'CFA'
 };
 
-router.get('/subscription/status', authenticateToken, async (req: AuthRequest, res: Response) => {
+// Simplified paths as they are mounted under /api/payment
+router.get('/status', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const schoolId = req.user?.schoolId;
     if (!schoolId) {
@@ -34,7 +35,7 @@ router.get('/subscription/status', authenticateToken, async (req: AuthRequest, r
                 subscription_end_date, preferred_currency, name 
          FROM schools WHERE id = ?`,
         [schoolId],
-        (err, row) => err ? reject(err) : resolve(row)
+        (err: any, row: any) => err ? reject(err) : resolve(row)
       );
     });
 
@@ -62,7 +63,7 @@ router.get('/subscription/status', authenticateToken, async (req: AuthRequest, r
   }
 });
 
-router.post('/subscription/currency', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/currency', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const schoolId = req.user?.schoolId;
     const { currency } = req.body;
@@ -79,7 +80,7 @@ router.post('/subscription/currency', authenticateToken, async (req: AuthRequest
       db.getDB().run(
         `UPDATE schools SET preferred_currency = ? WHERE id = ?`,
         [currency, schoolId],
-        (err) => err ? reject(err) : resolve()
+        (err: any) => err ? reject(err) : resolve()
       );
     });
 
@@ -90,7 +91,7 @@ router.post('/subscription/currency', authenticateToken, async (req: AuthRequest
   }
 });
 
-router.get('/subscription/plans', async (req: AuthRequest, res: Response) => {
+router.get('/plans', async (req: AuthRequest, res: Response) => {
   try {
     const currency = req.query.currency as string || 'NGN';
     const validCurrency = CURRENCY_SYMBOLS[currency] ? currency : 'NGN';
@@ -110,7 +111,7 @@ router.get('/subscription/plans', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.post('/payment/initialize', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/initialize', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const schoolId = req.user?.schoolId;
     const { plan, currency } = req.body;
@@ -137,13 +138,14 @@ router.post('/payment/initialize', authenticateToken, async (req: AuthRequest, r
       db.getDB().get(
         `SELECT name, admin_phone FROM schools WHERE id = ?`,
         [schoolId],
-        (err, row) => err ? reject(err) : resolve(row)
+        (err: any, row: any) => err ? reject(err) : resolve(row)
       );
     });
 
     const paymentId = uuidv4();
     const amountInKobo = Math.round(amount * 100);
 
+    // Paystack Initialize
     const paystackResponse = await axios.post(
       'https://api.paystack.co/transaction/initialize',
       {
@@ -175,7 +177,7 @@ router.post('/payment/initialize', authenticateToken, async (req: AuthRequest, r
          (id, school_id, amount, currency, plan_name, term_months, transaction_ref, payment_status) 
          VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
         [paymentId, schoolId, amount, validCurrency, plan, 3, reference],
-        (err) => err ? reject(err) : resolve()
+        (err: any) => err ? reject(err) : resolve()
       );
     });
 
@@ -201,7 +203,7 @@ router.post('/payment/initialize', authenticateToken, async (req: AuthRequest, r
   }
 });
 
-router.get('/payment/verify/:reference', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/verify/:reference', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { reference } = req.params;
     const schoolId = req.user?.schoolId;
@@ -210,7 +212,7 @@ router.get('/payment/verify/:reference', authenticateToken, async (req: AuthRequ
       db.getDB().get(
         `SELECT * FROM subscription_payments WHERE transaction_ref = ? AND school_id = ?`,
         [reference, schoolId],
-        (err, row) => err ? reject(err) : resolve(row)
+        (err: any, row: any) => err ? reject(err) : resolve(row)
       );
     });
 
@@ -240,7 +242,7 @@ router.get('/payment/verify/:reference', authenticateToken, async (req: AuthRequ
            SET payment_status = 'success', paid_at = CURRENT_TIMESTAMP, payment_method = 'bank_transfer'
            WHERE id = ?`,
           [payment.id],
-          (err) => err ? reject(err) : resolve()
+          (err: any) => err ? reject(err) : resolve()
         );
       });
 
@@ -255,7 +257,7 @@ router.get('/payment/verify/:reference', authenticateToken, async (req: AuthRequ
                subscription_start_date = ?, subscription_end_date = ?
            WHERE id = ?`,
           [payment.plan_name, startDate, endDate, schoolId],
-          (err) => err ? reject(err) : resolve()
+          (err: any) => err ? reject(err) : resolve()
         );
       });
 
@@ -277,57 +279,7 @@ router.get('/payment/verify/:reference', authenticateToken, async (req: AuthRequ
   }
 });
 
-router.post('/payment/webhook', async (req: AuthRequest, res: Response) => {
-  try {
-    const event = req.body;
-
-    if (event.event === 'charge.success') {
-      const { reference, amount, currency, metadata } = event.data;
-      const { school_id, plan_name, term_months, payment_id } = metadata;
-
-      if (!school_id || !plan_name) {
-        logger.warn({ event }, 'Webhook missing required metadata');
-        return res.status(400).json({ success: false, error: 'Missing metadata' });
-      }
-
-      const paymentAmount = amount / 100;
-
-      await new Promise<void>((resolve, reject) => {
-        db.getDB().run(
-          `UPDATE subscription_payments 
-           SET payment_status = 'success', paid_at = CURRENT_TIMESTAMP, payment_method = 'bank_transfer'
-           WHERE transaction_ref = ?`,
-          [reference],
-          (err) => err ? reject(err) : resolve()
-        );
-      });
-
-      const startDate = new Date();
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + (term_months || 3));
-
-      await new Promise<void>((resolve, reject) => {
-        db.getDB().run(
-          `UPDATE schools 
-           SET subscription_plan = ?, subscription_status = 'active', 
-               subscription_start_date = ?, subscription_end_date = ?
-           WHERE id = ?`,
-          [plan_name, startDate, endDate, school_id],
-          (err) => err ? reject(err) : resolve()
-        );
-      });
-
-      logger.info({ school_id, plan_name, amount: paymentAmount }, 'Payment webhook processed successfully');
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    logger.error({ error }, 'Webhook processing failed');
-    res.status(500).json({ success: false, error: 'Webhook processing failed' });
-  }
-});
-
-router.get('/payment/history', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/history', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const schoolId = req.user?.schoolId;
 
@@ -339,7 +291,7 @@ router.get('/payment/history', authenticateToken, async (req: AuthRequest, res: 
          ORDER BY created_at DESC
          LIMIT 20`,
         [schoolId],
-        (err, rows) => err ? reject(err) : resolve(rows || [])
+        (err: any, rows: any) => err ? reject(err) : resolve(rows || [])
       );
     });
 

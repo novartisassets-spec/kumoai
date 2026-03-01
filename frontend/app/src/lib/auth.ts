@@ -301,11 +301,11 @@ class AuthService {
 
     // Subscription & Payment API methods
     async getSubscriptionStatus(): Promise<any> {
-        return this.request('/subscription/status', { method: 'GET' });
+        return this.request('/payment/status', { method: 'GET' });
     }
 
     async updateCurrency(currency: string): Promise<any> {
-        return this.request('/subscription/currency', { 
+        return this.request('/payment/currency', { 
             method: 'POST',
             body: JSON.stringify({ currency })
         });
@@ -313,7 +313,7 @@ class AuthService {
 
     async getPlans(currency?: string): Promise<any> {
         const params = currency ? `?currency=${currency}` : '';
-        return this.request(`/subscription/plans${params}`, { method: 'GET' });
+        return this.request(`/payment/plans${params}`, { method: 'GET' });
     }
 
     async initializePayment(plan: string, currency: string): Promise<any> {

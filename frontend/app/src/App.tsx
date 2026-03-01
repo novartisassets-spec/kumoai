@@ -4217,11 +4217,17 @@ function RechargePage({ onNavigate: _onNavigate }: { onNavigate: (page: string) 
       const result = await authService.initializePayment(planName, currency);
       
       if (result.success) {
-        setPaymentDetails({
-          ...result.data,
-          planName
-        });
-        setPollingRef(result.data.reference);
+        if (result.data.authorizationUrl) {
+          // Redirect to Paystack Checkout
+          window.location.href = result.data.authorizationUrl;
+        } else {
+          // Fallback to manual display
+          setPaymentDetails({
+            ...result.data,
+            planName
+          });
+          setPollingRef(result.data.reference);
+        }
       } else {
         alert(result.error || 'Failed to initialize payment');
       }
@@ -4408,109 +4414,126 @@ function RechargePage({ onNavigate: _onNavigate }: { onNavigate: (page: string) 
         </div>
       </div>
 
-      {/* Plans Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        {plans.map((plan: any) => {
-          const Icon = getPlanIcon(plan.name);
-          const isCurrentPlan = subscription?.plan === plan.name;
-          const currentCurrency = CURRENCIES.find(c => c.code === currency) || CURRENCIES[0];
-          
-          return (
-            <div
-              key={plan.name}
-              className={`
-                relative rounded-2xl border overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl
-                ${plan.name === 'Professional' ? 'bg-gradient-to-br from-[#7dd3c0]/20 via-[#5fb3a0]/10 to-transparent' : 'bg-white/5'}
-                ${plan.name === 'Professional' ? 'border-[#7dd3c0]/30' : 'border-white/10'}
-                ${plan.name === 'Professional' ? 'ring-2 ring-[#ffd700] ring-offset-2 ring-offset-[#4a4f55]' : ''}
-              `}
-            >
-              {plan.name === 'Professional' && (
-                <div className="absolute top-0 right-0">
-                  <div className="bg-[#ffd700] text-black text-xs font-bold px-3 py-1 rounded-bl-xl">
-                    POPULAR
-                  </div>
-                </div>
-              )}
-
-              <div className="p-6 space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                    plan.name === 'Professional' ? 'bg-[#ffd700] text-black' : 'bg-white/10 text-white'
-                  }`}>
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-white font-bold text-lg">{plan.name}</h3>
-                    <p className="text-white/50 text-xs">
-                      {plan.name === 'Free' ? 'Try before you buy' : 
-                       plan.name === 'Enterprise' ? 'For large institutions' : '3 months term'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="py-4 border-t border-white/10">
-                  {plan.price === 0 || plan.price === null ? (
-                    <div className="text-white font-bold text-2xl">
-                      {plan.name === 'Enterprise' ? 'Custom' : 'Free'}
+            {/* Plans Grid */}
+            {plans.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                {plans.map((plan: any) => {
+                  const Icon = getPlanIcon(plan.name);
+                  const isCurrentPlan = subscription?.plan === plan.name;
+                  const currentCurrency = CURRENCIES.find(c => c.code === currency) || CURRENCIES[0];
+                  
+                  return (
+                    <div
+                      key={plan.name}
+                      className={`
+                        relative rounded-2xl border overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl
+                        ${plan.name === 'Professional' ? 'bg-gradient-to-br from-[#7dd3c0]/20 via-[#5fb3a0]/10 to-transparent' : 'bg-white/5'}
+                        ${plan.name === 'Professional' ? 'border-[#7dd3c0]/30' : 'border-white/10'}
+                        ${plan.name === 'Professional' ? 'ring-2 ring-[#ffd700] ring-offset-2 ring-offset-[#4a4f55]' : ''}
+                      `}
+                    >
+                      {plan.name === 'Professional' && (
+                        <div className="absolute top-0 right-0">
+                          <div className="bg-[#ffd700] text-black text-xs font-bold px-3 py-1 rounded-bl-xl">
+                            POPULAR
+                          </div>
+                        </div>
+                      )}
+      
+                      <div className="p-6 space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                            plan.name === 'Professional' ? 'bg-[#ffd700] text-black' : 'bg-white/10 text-white'
+                          }`}>
+                            <Icon className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <h3 className="text-white font-bold text-lg">{plan.name}</h3>
+                            <p className="text-white/50 text-xs">
+                              {plan.name === 'Free' ? 'Try before you buy' : 
+                               plan.name === 'Enterprise' ? 'For large institutions' : '3 months term'}
+                            </p>
+                          </div>
+                        </div>
+      
+                        <div className="py-4 border-t border-white/10">
+                          {plan.price === 0 || plan.price === null ? (
+                            <div className="text-white font-bold text-2xl">
+                              {plan.name === 'Enterprise' ? 'Custom' : 'Free'}
+                            </div>
+                          ) : (
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-white font-bold text-3xl">{currentCurrency.symbol}{plan.price?.toLocaleString()}</span>
+                              <span className="text-white/50 text-sm">/term</span>
+                            </div>
+                          )}
+                        </div>
+      
+                        <ul className="space-y-3 pt-4 border-t border-white/10">
+                          {(PLAN_FEATURES[plan.name]?.features || []).map((feature: string, i: number) => (
+                            <li key={i} className="flex items-start gap-2 text-white/70 text-sm">
+                              <Check className="w-4 h-4 text-[#7dd3c0] flex-shrink-0 mt-0.5" />
+                              {feature}
+                            </li>
+                          ))}
+                          {(PLAN_FEATURES[plan.name]?.notIncluded || []).map((feature: string, i: number) => (
+                            <li key={i} className="flex items-start gap-2 text-white/30 text-sm line-through">
+                              <X className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
+      
+                        <button
+                          onClick={() => handleSubscribe(plan.name)}
+                          disabled={isProcessing === plan.name || isCurrentPlan || plan.name === 'Free'}
+                          className={`
+                            w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-300
+                            ${plan.name === 'Professional' 
+                              ? 'bg-[#ffd700] text-black hover:bg-[#ffed4e]' 
+                              : isCurrentPlan || plan.name === 'Free'
+                                ? 'bg-white/10 text-white/50 cursor-not-allowed'
+                                : 'bg-white/10 text-white hover:bg-white/20'
+                            }
+                            disabled:opacity-50
+                          `}
+                        >
+                          {isProcessing === plan.name ? (
+                            <div className="flex items-center justify-center gap-2">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Processing...
+                            </div>
+                          ) : isCurrentPlan ? (
+                            'Current Plan'
+                          ) : plan.name === 'Free' ? (
+                            'Free'
+                          ) : (
+                            `Subscribe to ${plan.name}`
+                          )}
+                        </button>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-white font-bold text-3xl">{currentCurrency.symbol}{plan.price?.toLocaleString()}</span>
-                      <span className="text-white/50 text-sm">/term</span>
-                    </div>
-                  )}
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bg-white/5 rounded-2xl p-12 text-center border border-white/10">
+                <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="w-8 h-8 text-red-400" />
                 </div>
-
-                <ul className="space-y-3 pt-4 border-t border-white/10">
-                  {(PLAN_FEATURES[plan.name]?.features || []).map((feature: string, i: number) => (
-                    <li key={i} className="flex items-start gap-2 text-white/70 text-sm">
-                      <Check className="w-4 h-4 text-[#7dd3c0] flex-shrink-0 mt-0.5" />
-                      {feature}
-                    </li>
-                  ))}
-                  {(PLAN_FEATURES[plan.name]?.notIncluded || []).map((feature: string, i: number) => (
-                    <li key={i} className="flex items-start gap-2 text-white/30 text-sm line-through">
-                      <X className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-
-                <button
-                  onClick={() => handleSubscribe(plan.name)}
-                  disabled={isProcessing === plan.name || isCurrentPlan || plan.name === 'Free'}
-                  className={`
-                    w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-300
-                    ${plan.name === 'Professional' 
-                      ? 'bg-[#ffd700] text-black hover:bg-[#ffed4e]' 
-                      : isCurrentPlan || plan.name === 'Free'
-                        ? 'bg-white/10 text-white/50 cursor-not-allowed'
-                        : 'bg-white/10 text-white hover:bg-white/20'
-                    }
-                    disabled:opacity-50
-                  `}
+                <h3 className="text-xl font-bold text-white mb-2">Failed to load plans</h3>
+                <p className="text-white/50 text-sm mb-6 max-w-sm mx-auto">
+                  We couldn't retrieve the subscription plans. Please check your connection and try again.
+                </p>
+                <button 
+                  onClick={loadData}
+                  className="px-6 py-2 bg-[#ffd700] text-black rounded-lg font-semibold hover:bg-[#ffed4e] transition-all"
                 >
-                  {isProcessing === plan.name ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Processing...
-                    </div>
-                  ) : isCurrentPlan ? (
-                    'Current Plan'
-                  ) : plan.name === 'Free' ? (
-                    'Free'
-                  ) : (
-                    `Subscribe to ${plan.name}`
-                  )}
+                  Retry Loading
                 </button>
               </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* FAQ Section */}
+            )}
+            {/* FAQ Section */}
       <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
         <h3 className="text-white font-semibold mb-4">Frequently Asked Questions</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
