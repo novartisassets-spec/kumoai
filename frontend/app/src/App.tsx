@@ -4104,7 +4104,7 @@ function AnalyticsPage({ onNavigate: _onNavigate }: { onNavigate: (page: string)
 
 // Recharge Page - Subscription Plans with Paystack Integration
 function RechargePage({ onNavigate }: { onNavigate: (page: string) => void }) {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const [subscription, setSubscription] = useState<any>(null);
   const [currency, setCurrency] = useState('NGN');
   const [plans, setPlans] = useState<any[]>([]);
@@ -4121,10 +4121,6 @@ function RechargePage({ onNavigate }: { onNavigate: (page: string) => void }) {
     { code: 'ZAR', name: 'South African Rand', symbol: 'R', flag: '🇿🇦' },
     { code: 'UGX', name: 'Ugandan Shilling', symbol: 'USh', flag: '🇺🇬' },
   ];
-
-  const CURRENCY_SYMBOLS: Record<string, string> = {
-    NGN: '₦', USD: '$', KES: 'KSh', GHS: '₵', ZAR: 'R', UGX: 'USh', XOF: 'CFA'
-  };
 
   const PLAN_FEATURES: Record<string, { features: string[], notIncluded: string[] }> = {
     'Free': {
@@ -4406,7 +4402,7 @@ function RechargePage({ onNavigate }: { onNavigate: (page: string) => void }) {
 
       {/* Plans Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        {plans.map((plan: any, index: number) => {
+        {plans.map((plan: any) => {
           const Icon = getPlanIcon(plan.name);
           const isCurrentPlan = subscription?.plan === plan.name;
           const currentCurrency = CURRENCIES.find(c => c.code === currency) || CURRENCIES[0];
