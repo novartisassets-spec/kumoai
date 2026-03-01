@@ -236,16 +236,19 @@ function FeaturesSection() {
       title: 'WhatsApp-First',
       description: 'No apps to download. Teachers, parents, and admins use WhatsApp they already know.',
       icon: Smartphone,
+      image: '/assets/whatsapp-interface.png'
     },
     {
       title: 'AI-Powered',
       description: 'Snap photos of mark sheets. Our AI extracts and validates data automatically.',
       icon: Brain,
+      image: '/assets/ai-extraction.png'
     },
     {
       title: 'Instant Reports',
       description: 'Generate beautiful report cards and broadsheets with one click.',
       icon: FileText,
+      image: '/assets/report-preview.png'
     },
   ];
 
@@ -276,11 +279,21 @@ function FeaturesSection() {
             return (
               <div
                 key={index}
-                className={`floating-card transition-all duration-700 ${
+                className={`floating-card flex flex-col transition-all duration-700 ${
                   isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
                 }`}
                 style={{ transitionDelay: `${200 + index * 150}ms` }}
               >
+                <div className="mb-6 relative h-32 rounded-xl overflow-hidden bg-black/20 border border-white/5">
+                  <img 
+                    src={feature.image} 
+                    alt={feature.title} 
+                    className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `https://placehold.co/400x200/1a1f25/ffd700?text=${feature.title}`;
+                    }}
+                  />
+                </div>
                 <div className="feature-card-icon">
                   <IconComponent className="w-6 h-6 text-[#7dd3c0]" />
                 </div>
@@ -319,10 +332,10 @@ function HowItWorksSection() {
   }, []);
 
   const steps = [
-    { num: '01', title: 'Setup', desc: 'Configure your school in minutes' },
-    { num: '02', title: 'Invite', desc: 'Send tokens to teachers & parents' },
-    { num: '03', title: 'Submit', desc: 'Teachers enter marks via WhatsApp' },
-    { num: '04', title: 'Report', desc: 'Generate and share instantly' },
+    { num: '01', title: 'Setup', desc: 'Configure your school in minutes', image: '/assets/step-setup.png' },
+    { num: '02', title: 'Invite', desc: 'Send tokens to teachers & parents', image: '/assets/step-invite.png' },
+    { num: '03', title: 'Submit', desc: 'Teachers enter marks via WhatsApp', image: '/assets/step-submit.png' },
+    { num: '04', title: 'Report', desc: 'Generate and share instantly', image: '/assets/step-report.png' },
   ];
 
   return (
@@ -355,6 +368,16 @@ function HowItWorksSection() {
               }`}
               style={{ transitionDelay: `${200 + index * 100}ms` }}
             >
+              <div className="mb-4 aspect-video rounded-lg overflow-hidden bg-black/40 border border-white/5">
+                <img 
+                  src={step.image} 
+                  alt={step.title} 
+                  className="w-full h-full object-cover opacity-40 hover:opacity-100 transition-opacity"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = `https://placehold.co/300x200/1a1f25/7dd3c0?text=Step ${step.num}`;
+                  }}
+                />
+              </div>
               <span className="text-3xl font-light text-white/20">{step.num}</span>
               <h3 className="text-white font-medium mt-4 mb-2">{step.title}</h3>
               <p className="text-white/50 text-sm">{step.desc}</p>
@@ -504,10 +527,11 @@ function VisionMissionSection() {
   );
 }
 
-// Pricing Section
+// Pricing Section - Pan-African Futuristic Design
 function PricingSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [currency, setCurrency] = useState<'USD' | 'NGN'>('NGN');
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -530,40 +554,44 @@ function PricingSection() {
   const plans = [
     { 
       name: 'Free', 
-      price: '$0', 
+      price: { USD: '0', NGN: '0' },
+      originalPrice: null,
       period: '/term', 
       icon: 'Gift',
       color: 'from-[#ffd700]/20 via-[#ffed4e]/10 to-transparent',
-      features: ['1 class', '1 teacher', 'Unlimited parents', '1 academic term (3 months)'],
-      description: 'Try before you buy'
+      features: ['Up to 50 students', '1 teacher account', '1 academic term', 'Basic reports'],
+      description: 'Explore the realm of AI'
     },
     { 
       name: 'Starter', 
-      price: '$49', 
-      period: '/mo', 
+      price: { USD: '35', NGN: '15,000' },
+      originalPrice: { USD: '45', NGN: '20,000' },
+      period: '/term', 
       icon: 'Zap',
       color: 'from-[#ffd700]/20 via-[#ffed4e]/10 to-transparent',
-      features: ['200 students', '1 school', 'Basic reports', 'WhatsApp support'],
-      description: 'Perfect for small schools'
+      features: ['Up to 200 students', '5 teacher accounts', 'Full academic year', 'WhatsApp support'],
+      description: 'Perfect for growing schools'
     },
     { 
       name: 'Professional', 
-      price: '$99', 
-      period: '/mo', 
+      price: { USD: '75', NGN: '35,000' },
+      originalPrice: { USD: '95', NGN: '45,000' },
+      period: '/term', 
       icon: 'Rocket',
       color: 'from-[#7dd3c0]/20 via-[#5fb3a0]/10 to-transparent',
       popular: true,
-      features: ['1,000 students', '3 schools', 'Analytics', 'API access', 'Priority support'],
-      description: 'Best for growing schools'
+      features: ['Up to 1,000 students', 'Unlimited teachers', 'Advanced analytics', 'Priority support'],
+      description: 'The standard for excellence'
     },
     { 
       name: 'Enterprise', 
-      price: 'Custom', 
+      price: { USD: 'Custom', NGN: 'Custom' },
+      originalPrice: null,
       period: '', 
       icon: 'Building',
       color: 'from-[#ffd700]/30 via-[#7dd3c0]/20 to-transparent',
-      features: ['Unlimited students', 'Unlimited schools', 'Custom integrations', 'Dedicated manager'],
-      description: 'For large institutions'
+      features: ['Unlimited students', 'Multi-branch support', 'Custom integrations', 'White-label solution'],
+      description: 'For massive institutions'
     },
   ];
 
@@ -587,21 +615,54 @@ function PricingSection() {
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-[#ffd700]/5 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#7dd3c0]/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-[#ffd700]/10 via-transparent to-[#7dd3c0]/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}} />
       </div>
 
       <div className="max-w-7xl mx-auto px-6 lg:px-12 relative z-10">
+        {/* Header with Continental Badge */}
         <div
-          className={`mb-16 transition-all duration-700 ${
+          className={`mb-16 text-center transition-all duration-700 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
-          <p className="eyebrow">Pricing</p>
-          <div className="section-header-pill">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-[#ffd700]/20 to-transparent border border-[#ffd700]/30 mb-6 group cursor-default">
+            <Globe className="w-4 h-4 text-[#ffd700] group-hover:rotate-180 transition-transform duration-1000" />
+            <span className="text-white/80 text-[10px] font-black uppercase tracking-[0.2em]">Pan-African Deployment Ready</span>
+          </div>
+          
+          <div className="section-header-pill mx-auto mb-6">
             <div className="header-icon-container">
               <CreditCard className="w-4 h-4 text-black header-icon" />
             </div>
-            <h2 className="section-headline">Simple & transparent.</h2>
+            <h2 className="section-headline">Localized for Africa.</h2>
+          </div>
+          
+          <p className="max-w-2xl mx-auto text-white/50 text-lg leading-relaxed mb-10">
+            Accepting payments from <span className="text-white font-bold">Nigeria, Kenya, Ghana, South Africa</span>, and 10+ countries via Paystack.
+          </p>
+
+          {/* Currency Toggle - Futuristic Switch */}
+          <div className="flex items-center justify-center gap-4 mb-12">
+            <button 
+              onClick={() => setCurrency('NGN')}
+              className={`px-6 py-2 rounded-xl text-xs font-black tracking-widest transition-all duration-500 border ${
+                currency === 'NGN' 
+                  ? 'bg-[#ffd700] text-black border-[#ffd700] shadow-lg shadow-[#ffd700]/20 scale-105' 
+                  : 'bg-white/5 text-white/40 border-white/10 hover:border-white/20'
+              }`}
+            >
+              NGN (₦)
+            </button>
+            <div className="h-[1px] w-8 bg-white/10" />
+            <button 
+              onClick={() => setCurrency('USD')}
+              className={`px-6 py-2 rounded-xl text-xs font-black tracking-widest transition-all duration-500 border ${
+                currency === 'USD' 
+                  ? 'bg-[#ffd700] text-black border-[#ffd700] shadow-lg shadow-[#ffd700]/20 scale-105' 
+                  : 'bg-white/5 text-white/40 border-white/10 hover:border-white/20'
+              }`}
+            >
+              USD ($)
+            </button>
           </div>
         </div>
 
@@ -618,60 +679,82 @@ function PricingSection() {
               <div className={`absolute inset-0 bg-gradient-to-br ${plan.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl blur-xl`} />
               
               {/* Card Content */}
-              <div className="relative z-10 p-5 h-full flex flex-col">
-                {/* Icon & Popular Badge */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${plan.popular || index === 0 ? 'bg-[#ffd700] text-black' : 'bg-white/10 text-white'} pricing-icon-3d`}>
+              <div className="relative z-10 p-6 h-full flex flex-col">
+                {/* Icon & Status */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${plan.popular || index === 0 ? 'bg-[#ffd700] text-black' : 'bg-white/10 text-white'} pricing-icon-3d shadow-xl shadow-black/20`}>
                     {getIcon(plan.icon)}
                   </div>
                   {plan.popular && (
-                    <span className="px-2 py-0.5 bg-[#ffd700] text-black text-[10px] font-bold rounded-full">
-                      Popular
-                    </span>
-                  )}
-                  {index === 0 && !plan.popular && (
-                    <span className="px-2 py-0.5 bg-[#ffd700] text-black text-[10px] font-bold rounded-full">
-                      Free
-                    </span>
+                    <div className="flex flex-col items-end">
+                      <span className="px-2 py-0.5 bg-[#ffd700] text-black text-[9px] font-black uppercase rounded-full animate-pulse">
+                        Best Value
+                      </span>
+                    </div>
                   )}
                 </div>
 
-                {/* Plan Name */}
-                <h3 className="text-lg font-bold text-white mb-0.5">{plan.name}</h3>
-                <p className="text-white/50 text-xs mb-3">{plan.description}</p>
+                {/* Plan Details */}
+                <h3 className="text-xl font-black text-white mb-1 tracking-tight uppercase">{plan.name}</h3>
+                <p className="text-white/40 text-[11px] font-medium leading-relaxed mb-6">{plan.description}</p>
 
-                {/* Price */}
-                <div className="flex items-baseline gap-1 mb-4">
-                  <span className="text-3xl font-bold text-white pricing-price-glow">{plan.price}</span>
-                  <span className="text-white/40 text-sm">{plan.period}</span>
+                {/* Price Display with Discount Logic */}
+                <div className="mb-8">
+                  {plan.originalPrice && (
+                    <p className="text-white/20 text-[11px] line-through font-bold mb-1 ml-1">
+                      {currency === 'NGN' ? '₦' : '$'}{plan.originalPrice[currency]}
+                    </p>
+                  )}
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-black text-white tracking-tighter pricing-price-glow">
+                      {plan.price[currency] === 'Custom' ? '' : (currency === 'NGN' ? '₦' : '$')}
+                      {plan.price[currency]}
+                    </span>
+                    <span className="text-white/30 text-[10px] font-bold uppercase tracking-widest">{plan.period}</span>
+                  </div>
                 </div>
 
-                {/* Features */}
-                <ul className="space-y-2 flex-1">
+                {/* Features List */}
+                <ul className="space-y-3 flex-1">
                   {plan.features.map((feature, fi) => (
-                    <li key={fi} className="text-white/70 text-xs flex items-center gap-2">
-                       <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${plan.popular || index === 0 ? 'bg-[#ffd700]/20' : 'bg-white/10'}`}>
-                        <Check className="w-2.5 h-2.5 text-[#7dd3c0]" />
+                    <li key={fi} className="text-white/60 text-[11px] font-medium flex items-start gap-3 leading-snug">
+                       <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${plan.popular || index === 0 ? 'bg-[#ffd700]/20' : 'bg-white/5'}`}>
+                        <Check className={`w-2.5 h-2.5 ${plan.popular || index === 0 ? 'text-[#ffd700]' : 'text-[#7dd3c0]'}`} />
                       </div>
                       {feature}
                     </li>
                   ))}
                 </ul>
 
-                {/* CTA Button */}
-                <button className={`w-full mt-4 py-2.5 rounded-lg font-semibold text-sm transition-all duration-300 ${plan.popular || index === 0 ? 'bg-[#ffd700] text-black hover:bg-[#ffed4e]' : 'bg-white/10 text-white hover:bg-white/20'}`}>
-                  {index === 0 ? 'Start Free' : 'Get Started'}
+                {/* Technical CTA */}
+                <button className={`w-full mt-8 py-3 rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all duration-500 border ${
+                  plan.popular || index === 0 
+                    ? 'bg-[#ffd700] text-black border-[#ffd700] hover:bg-[#ffed4e] hover:scale-[1.02] shadow-xl shadow-[#ffd700]/10' 
+                    : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:border-white/20'
+                }`}>
+                  {index === 0 ? 'Activate Protocol' : 'Initialize Plan'}
                 </button>
               </div>
 
-              {/* 3D Dark Academic Element */}
-              <div className="absolute -bottom-4 -right-4 w-24 h-24 opacity-0 group-hover:opacity-100 transition-all duration-500 pricing-3d-element">
-                <div className="w-full h-full bg-gradient-to-br from-black/40 to-black/20 rounded-full blur-sm flex items-center justify-center">
-                  <GraduationCap className="w-10 h-10 text-white/20" />
-                </div>
+              {/* Decorative Corner Label */}
+              <div className="absolute top-0 right-0 p-2 pointer-events-none opacity-10 group-hover:opacity-100 transition-opacity">
+                <p className="text-[8px] font-black text-[#ffd700] tracking-[0.5em] rotate-90 origin-top-right translate-y-4">KUMO-SEC-0{index+1}</p>
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Pan-African Support Footer */}
+        <div className="mt-16 pt-10 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-700">
+            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest mr-4">Serving Africa:</span>
+            <div className="flex items-center gap-6">
+              {['🇳🇬', '🇰🇪', '🇬🇭', '🇿🇦', '🇷🇼'].map((flag, i) => (
+                <span key={i} className="text-xl filter drop-shadow-lg cursor-default hover:scale-125 transition-transform">{flag}</span>
+              ))}
+            </div>
+          </div>
+          <p className="text-white/20 text-[9px] font-bold uppercase tracking-[0.3em]">Secure Global Payment Architecture</p>
         </div>
       </div>
     </section>
@@ -704,9 +787,14 @@ function CTASection() {
   return (
     <section 
       ref={sectionRef}
-      className="py-24 bg-[#3a3f45]"
+      className="py-24 bg-[#3a3f45] relative overflow-hidden"
     >
-      <div className="max-w-7xl mx-auto px-6 lg:px-12 text-center">
+      {/* Background Graphic */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-10 pointer-events-none">
+        <img src="/assets/cta-pattern.png" alt="" className="w-full h-full object-cover" />
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 lg:px-12 text-center relative z-10">
         <div 
           className={`transition-all duration-700 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
