@@ -284,6 +284,7 @@ export class Database {
             { path: path.join(__dirname, 'schema_memory.sql'), name: 'Memory' },
             { path: path.join(__dirname, 'schema_teacher_confirmation.sql'), name: 'Teacher Confirmation' },
             { path: path.join(__dirname, 'schema_student_marks_indexed.sql'), name: 'Student Marks Indexed' },
+            { path: path.join(__dirname, 'schema_student_marks_indexed_add_name.sql'), name: 'Student Marks Indexed Add Name' },
             { path: path.join(__dirname, 'schema_pdf_storage_marks.sql'), name: 'PDF Storage & Marks' },
             { path: path.join(__dirname, 'schema_sessions.sql'), name: 'Sessions' },
             { path: path.join(__dirname, 'schema_file_storage.sql'), name: 'File Storage' },

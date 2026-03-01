@@ -239,7 +239,7 @@ router.get('/students', async (req: AuthRequest, res: Response) => {
 
         let sql = `
             SELECT s.*, 
-                   (SELECT GROUP_CONCAT(g.guardian_phone) FROM student_guardians g WHERE g.student_id = s.student_id) as guardian_phones
+                   (SELECT STRING_AGG(g.guardian_phone, ',') FROM student_guardians g WHERE g.student_id = s.student_id) as guardian_phones
             FROM students s 
             WHERE s.school_id = ?
         `;
