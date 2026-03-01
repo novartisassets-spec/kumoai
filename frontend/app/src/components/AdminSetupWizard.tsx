@@ -490,7 +490,7 @@ function GradingStep({ config: initialConfig, onUpdate, onNext, onBack, schoolTy
                     <div>
                         <p className="text-blue-400 font-medium text-sm">FLUID Grading System</p>
                         <p className="text-gray-300 text-sm mt-1">
-                            TEECHA-AI adapts to YOUR grading structure. Add as many assessment pillars as your school uses.
+                            KUMO-AI adapts to YOUR grading structure. Add as many assessment pillars as your school uses.
                         </p>
                     </div>
                 </div>
@@ -950,7 +950,7 @@ function CompleteStep({ onComplete }: { onComplete: () => void }) {
                 <Check className="w-12 h-12 text-green-500" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">Setup Complete!</h2>
-            <p className="text-gray-400 mb-8">Your school is now configured and ready to use TEECHA-AI</p>
+            <p className="text-gray-400 mb-8">Your school is now configured and ready to use KUMO-AI</p>
             
             <button
                 onClick={onComplete}

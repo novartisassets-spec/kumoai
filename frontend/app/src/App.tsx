@@ -30,7 +30,7 @@ function Navigation({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' | 
           <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center">
             <MessageCircle className="w-4 h-4 text-white" />
           </div>
-          <span className="text-white font-semibold text-lg tracking-wide">TEECHA-AI</span>
+          <span className="text-white font-semibold text-lg tracking-wide">KUMO-AI</span>
         </button>
 
         {/* Center Links - Desktop */}
@@ -52,7 +52,7 @@ function Navigation({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' | 
             <span className="cta-pill-icon">
               <MessageCircle className="w-3.5 h-3.5" />
             </span>
-            <span>Enter the TEECHA-AI Realm</span>
+            <span>Enter the KUMO-AI Realm</span>
           </button>
         </div>
 
@@ -92,7 +92,7 @@ function Navigation({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' | 
                 <span className="cta-pill-icon">
                   <MessageCircle className="w-3.5 h-3.5" />
                 </span>
-                <span>Enter the TEECHA-AI Realm</span>
+                <span>Enter the KUMO-AI Realm</span>
               </button>
             </div>
           </div>
@@ -113,7 +113,7 @@ function HeroSection({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' |
   return (
     <section className="relative min-h-screen bg-[#4a4f55] overflow-hidden">
       {/* Background Blurred Text - Responsive sizing */}
-      <div className="bg-text-blur">TEECHA-AI</div>
+      <div className="bg-text-blur">KUMO-AI</div>
 
       {/* Main Content Container */}
       <div className="relative z-30 min-h-screen flex flex-col lg:flex-row items-center justify-between px-6 lg:px-12 pt-28 pb-12 gap-8 lg:gap-4">
@@ -127,7 +127,7 @@ function HeroSection({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' |
           <p className="eyebrow">For Teachers. For Schools. For Africa.</p>
           <h1 className="headline text-white">
             Let Teachers Teach.<br />
-            Let <span className="text-black bg-[#ffd700] px-2 py-1 rounded-md text-[0.75em] inline-block font-bold shadow-md shadow-[#ffd700]/20 border border-[#ffed4e]">TEECHA-AI</span> Handle The Rest.
+            Let <span className="text-black bg-[#ffd700] px-2 py-1 rounded-md text-[0.75em] inline-block font-bold shadow-md shadow-[#ffd700]/20 border border-[#ffed4e]">KUMO-AI</span> Handle The Rest.
           </h1>
           <p className="description">
             AI powered School Academic Operation management through WhatsApp.<br />
@@ -152,7 +152,7 @@ function HeroSection({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' |
           <div className="relative w-[200px] sm:w-[240px] md:w-[280px] lg:w-[320px]">
             <img 
               src="/hero-3d.png" 
-              alt="TEECHA-AI 3D"
+              alt="KUMO-AI 3D"
               className="w-full h-auto animate-float"
             />
           </div>
@@ -701,7 +701,7 @@ function CTASection() {
             <h2 className="section-headline">Ready to transform your school?</h2>
           </div>
           <p className="text-white/60 mb-8 max-w-md mx-auto">
-            Join 500+ schools across Africa using TEECHA-AI to simplify academic management.
+            Join 500+ schools across Africa using KUMO-AI to simplify academic management.
           </p>
           <button className="cta-pill mx-auto">
             <span className="cta-pill-icon">
@@ -793,9 +793,9 @@ function SignupPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' | 
 
   return (
     <div className="min-h-screen bg-[#4a4f55] flex items-center justify-center px-4 py-12 relative overflow-hidden">
-      {/* TEECHA-AI Background Text */}
+      {/* KUMO-AI Background Text */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-        <span className="text-[20vw] font-bold text-white/[0.03] blur-sm">TEECHA-AI</span>
+        <span className="text-[20vw] font-bold text-white/[0.03] blur-sm">KUMO-AI</span>
       </div>
 
       {/* Animated Background Elements */}
@@ -1103,9 +1103,9 @@ function LoginPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' | '
   if (showRecovery) {
     return (
       <div className="min-h-screen bg-[#4a4f55] flex items-center justify-center px-4 py-12 relative overflow-hidden">
-        {/* TEECHA-AI Background Text */}
+        {/* KUMO-AI Background Text */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-          <span className="text-[20vw] font-bold text-white/[0.03] blur-sm">TEECHA-AI</span>
+          <span className="text-[20vw] font-bold text-white/[0.03] blur-sm">KUMO-AI</span>
         </div>
 
         {/* Animated Background Elements */}
@@ -1172,9 +1172,9 @@ function LoginPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' | '
 
   return (
     <div className="min-h-screen bg-[#4a4f55] flex items-center justify-center px-4 py-12 relative overflow-hidden">
-      {/* TEECHA-AI Background Text */}
+      {/* KUMO-AI Background Text */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-        <span className="text-[20vw] font-bold text-white/[0.03] blur-sm">TEECHA-AI</span>
+        <span className="text-[20vw] font-bold text-white/[0.03] blur-sm">KUMO-AI</span>
       </div>
 
       {/* Animated Background Elements */}
@@ -1320,7 +1320,7 @@ function Footer() {
               <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center border border-white/10">
                 <MessageCircle className="w-5 h-5 text-white" />
               </div>
-              <span className="text-white font-semibold text-xl tracking-wide">TEECHA-AI</span>
+              <span className="text-white font-semibold text-xl tracking-wide">KUMO-AI</span>
             </div>
             <p className="text-white/40 text-sm leading-relaxed mb-6 max-w-xs">
               Academic management powered by WhatsApp and AI. No apps. No complexity. Just results.
@@ -1403,7 +1403,7 @@ function Footer() {
         {/* Bottom Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-white/30 text-xs">
-            © 2024 TEECHA-AI. All rights reserved.
+            © 2024 KUMO-AI. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <a href="#" className="text-white/30 text-xs hover:text-white/60 transition-colors">Privacy Policy</a>
@@ -1436,9 +1436,9 @@ function ContactPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' |
       
       {/* Hero Section */}
       <section className="relative min-h-[60vh] flex items-center justify-center px-6 overflow-hidden">
-        {/* TEECHA-AI Background Text */}
+        {/* KUMO-AI Background Text */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-          <span className="text-[20vw] font-bold text-white/[0.03] blur-sm">TEECHA-AI</span>
+          <span className="text-[20vw] font-bold text-white/[0.03] blur-sm">KUMO-AI</span>
         </div>
         <div className="bg-text-blur">REACH</div>
         <div className="relative z-10 text-center max-w-4xl mx-auto pt-24">
@@ -1576,12 +1576,12 @@ function DocumentationPage({ onNavigate }: { onNavigate: (page: 'landing' | 'sig
 
   const docsContent: Record<string, { title: string; content: React.ReactNode }> = {
     'getting-started': {
-      title: 'Getting Started with TEECHA-AI',
+      title: 'Getting Started with KUMO-AI',
       content: (
         <div className="space-y-6">
-          <p className="text-white/70">Welcome to TEECHA-AI! This guide will help you set up your school and start managing academic records efficiently.</p>
-          <h3 className="text-xl font-bold text-white mt-6">What is TEECHA-AI?</h3>
-          <p className="text-white/70">TEECHA-AI is a WhatsApp-first academic management platform designed specifically for African schools. It allows teachers to submit marks, generate reports, and communicate with parents—all through WhatsApp.</p>
+          <p className="text-white/70">Welcome to KUMO-AI! This guide will help you set up your school and start managing academic records efficiently.</p>
+          <h3 className="text-xl font-bold text-white mt-6">What is KUMO-AI?</h3>
+          <p className="text-white/70">KUMO-AI is a WhatsApp-first academic management platform designed specifically for African schools. It allows teachers to submit marks, generate reports, and communicate with parents—all through WhatsApp.</p>
           <h3 className="text-xl font-bold text-white mt-6">Key Features</h3>
           <ul className="space-y-2 text-white/70 list-disc list-inside">
             <li>WhatsApp-based mark submission</li>
@@ -1592,7 +1592,7 @@ function DocumentationPage({ onNavigate }: { onNavigate: (page: 'landing' | 'sig
           </ul>
           <h3 className="text-xl font-bold text-white mt-6">Quick Start</h3>
           <ol className="space-y-2 text-white/70 list-decimal list-inside">
-            <li>Sign up for a TEECHA-AI account</li>
+            <li>Sign up for a KUMO-AI account</li>
             <li>Complete school setup</li>
             <li>Add teachers and students</li>
             <li>Start submitting marks via WhatsApp</li>
@@ -1605,7 +1605,7 @@ function DocumentationPage({ onNavigate }: { onNavigate: (page: 'landing' | 'sig
       title: 'School Setup Guide',
       content: (
         <div className="space-y-6">
-          <p className="text-white/70">Setting up your school in TEECHA-AI is a straightforward process. Follow these steps to get started.</p>
+          <p className="text-white/70">Setting up your school in KUMO-AI is a straightforward process. Follow these steps to get started.</p>
           <h3 className="text-xl font-bold text-white mt-6">Step 1: Basic Information</h3>
           <p className="text-white/70">Enter your school name, type (Primary/Secondary), and contact information.</p>
           <h3 className="text-xl font-bold text-white mt-6">Step 2: Grading Configuration</h3>
@@ -1621,7 +1621,7 @@ function DocumentationPage({ onNavigate }: { onNavigate: (page: 'landing' | 'sig
       title: 'User Management',
       content: (
         <div className="space-y-6">
-          <p className="text-white/70">TEECHA-AI supports three user roles: Administrators, Teachers, and Parents.</p>
+          <p className="text-white/70">KUMO-AI supports three user roles: Administrators, Teachers, and Parents.</p>
           <h3 className="text-xl font-bold text-white mt-6">Administrators</h3>
           <p className="text-white/70">Full access to all features. Can manage school settings, users, and generate all reports.</p>
           <h3 className="text-xl font-bold text-white mt-6">Teachers</h3>
@@ -1637,7 +1637,7 @@ function DocumentationPage({ onNavigate }: { onNavigate: (page: 'landing' | 'sig
       title: 'Entering Marks',
       content: (
         <div className="space-y-6">
-          <p className="text-white/70">TEECHA-AI offers multiple ways to enter marks, with WhatsApp being the primary method.</p>
+          <p className="text-white/70">KUMO-AI offers multiple ways to enter marks, with WhatsApp being the primary method.</p>
           <h3 className="text-xl font-bold text-white mt-6">Method 1: WhatsApp Photo</h3>
           <p className="text-white/70">Teachers can photograph their mark sheets and send them via WhatsApp. Our AI extracts the data automatically.</p>
           <h3 className="text-xl font-bold text-white mt-6">Method 2: Web Interface</h3>
@@ -1672,11 +1672,11 @@ function DocumentationPage({ onNavigate }: { onNavigate: (page: 'landing' | 'sig
       title: 'WhatsApp Integration',
       content: (
         <div className="space-y-6">
-          <p className="text-white/70">TEECHA-AI leverages WhatsApp as its primary interface for teachers and parents.</p>
+          <p className="text-white/70">KUMO-AI leverages WhatsApp as its primary interface for teachers and parents.</p>
           <h3 className="text-xl font-bold text-white mt-6">Setup Process</h3>
           <ol className="space-y-2 text-white/70 list-decimal list-inside">
             <li>Register your school's WhatsApp Business number</li>
-            <li>Connect it to TEECHA-AI in the settings</li>
+            <li>Connect it to KUMO-AI in the settings</li>
             <li>Verify the connection with a test message</li>
             <li>Share the WhatsApp number with teachers and parents</li>
           </ol>
@@ -1697,7 +1697,7 @@ function DocumentationPage({ onNavigate }: { onNavigate: (page: 'landing' | 'sig
       title: 'API Reference',
       content: (
         <div className="space-y-6">
-          <p className="text-white/70">TEECHA-AI provides a RESTful API for integrating with other systems.</p>
+          <p className="text-white/70">KUMO-AI provides a RESTful API for integrating with other systems.</p>
           <h3 className="text-xl font-bold text-white mt-6">Authentication</h3>
           <p className="text-white/70">All API requests require an API key passed in the header: <code className="bg-white/10 px-2 py-1 rounded text-[#ffd700]">X-API-Key: your_key_here</code></p>
           <h3 className="text-xl font-bold text-white mt-6">Endpoints</h3>
@@ -1730,9 +1730,9 @@ function DocumentationPage({ onNavigate }: { onNavigate: (page: 'landing' | 'sig
       
       {/* Hero Section */}
       <section className="relative min-h-[50vh] flex items-center justify-center px-6 overflow-hidden">
-        {/* TEECHA-AI Background Text */}
+        {/* KUMO-AI Background Text */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-          <span className="text-[20vw] font-bold text-white/[0.03] blur-sm">TEECHA-AI</span>
+          <span className="text-[20vw] font-bold text-white/[0.03] blur-sm">KUMO-AI</span>
         </div>
         <div className="bg-text-blur">DOCS</div>
         <div className="relative z-10 text-center max-w-4xl mx-auto pt-24">
@@ -1741,7 +1741,7 @@ function DocumentationPage({ onNavigate }: { onNavigate: (page: 'landing' | 'sig
             Learn & <span className="text-[#ffd700]">Master</span>
           </h1>
           <p className="text-white/60 text-lg max-w-2xl mx-auto">
-            Everything you need to know about using TEECHA-AI effectively.
+            Everything you need to know about using KUMO-AI effectively.
           </p>
         </div>
         
@@ -1809,20 +1809,20 @@ function FAQsPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' | 'l
 
   const faqs = [
     {
-      question: "What is TEECHA-AI and how does it work?",
-      answer: "TEECHA-AI is a WhatsApp-first academic management platform designed for African schools. Teachers can submit marks by photographing mark sheets and sending them via WhatsApp. Our AI extracts the data automatically, validates it, and generates reports. Parents receive results directly on WhatsApp."
+      question: "What is KUMO-AI and how does it work?",
+      answer: "KUMO-AI is a WhatsApp-first academic management platform designed for African schools. Teachers can submit marks by photographing mark sheets and sending them via WhatsApp. Our AI extracts the data automatically, validates it, and generates reports. Parents receive results directly on WhatsApp."
     },
     {
       question: "Do I need to download any apps?",
-      answer: "No! TEECHA-AI works entirely through WhatsApp, which most teachers and parents already have. There's no need to learn new software or remember additional passwords. Simply use WhatsApp as you normally would."
+      answer: "No! KUMO-AI works entirely through WhatsApp, which most teachers and parents already have. There's no need to learn new software or remember additional passwords. Simply use WhatsApp as you normally would."
     },
     {
       question: "How accurate is the AI mark extraction?",
       answer: "Our AI has a 99% accuracy rate for clearly written mark sheets. For best results, ensure good lighting and clear handwriting. You can also review and edit extracted marks before finalizing."
     },
     {
-      question: "Can I use TEECHA-AI for multiple schools?",
-      answer: "Yes! TEECHA-AI supports multi-tenancy. If you're a school group or education consultant managing multiple schools, you can access all of them from a single dashboard. Contact us for group pricing."
+      question: "Can I use KUMO-AI for multiple schools?",
+      answer: "Yes! KUMO-AI supports multi-tenancy. If you're a school group or education consultant managing multiple schools, you can access all of them from a single dashboard. Contact us for group pricing."
     },
     {
       question: "What happens if I lose internet connection?",
@@ -1838,10 +1838,10 @@ function FAQsPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' | 'l
     },
     {
       question: "What grading systems do you support?",
-      answer: "TEECHA-AI is fully customizable. You can configure any grading pillars (CA1, CA2, Midterm, Exam, etc.) with custom weightings. We support percentage, letter grades, and GPA systems."
+      answer: "KUMO-AI is fully customizable. You can configure any grading pillars (CA1, CA2, Midterm, Exam, etc.) with custom weightings. We support percentage, letter grades, and GPA systems."
     },
     {
-      question: "How long does it take to set up TEECHA-AI?",
+      question: "How long does it take to set up KUMO-AI?",
       answer: "Most schools are fully operational within 30 minutes. The process involves: 1) Creating your account, 2) Configuring grading pillars, 3) Adding teachers and students, 4) Connecting WhatsApp."
     },
     {
@@ -1864,9 +1864,9 @@ function FAQsPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' | 'l
       
       {/* Hero Section */}
       <section className="relative min-h-[50vh] flex items-center justify-center px-6 overflow-hidden">
-        {/* TEECHA-AI Background Text */}
+        {/* KUMO-AI Background Text */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-          <span className="text-[20vw] font-bold text-white/[0.03] blur-sm">TEECHA-AI</span>
+          <span className="text-[20vw] font-bold text-white/[0.03] blur-sm">KUMO-AI</span>
         </div>
         <div className="bg-text-blur">FAQS</div>
         <div className="relative z-10 text-center max-w-4xl mx-auto pt-24">
@@ -1875,7 +1875,7 @@ function FAQsPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' | 'l
             Common <span className="text-[#ffd700]">Questions</span>
           </h1>
           <p className="text-white/60 text-lg max-w-2xl mx-auto">
-            Find answers to frequently asked questions about TEECHA-AI.
+            Find answers to frequently asked questions about KUMO-AI.
           </p>
         </div>
         
@@ -1987,9 +1987,9 @@ function FeaturesPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' 
       
       {/* Hero Section */}
       <section className="relative min-h-[70vh] flex items-center justify-center px-6 overflow-hidden">
-        {/* TEECHA-AI Background Text */}
+        {/* KUMO-AI Background Text */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-          <span className="text-[20vw] font-bold text-white/[0.03] blur-sm">TEECHA-AI</span>
+          <span className="text-[20vw] font-bold text-white/[0.03] blur-sm">KUMO-AI</span>
         </div>
         <div className="bg-text-blur">POWER</div>
         <div className="relative z-10 text-center max-w-5xl mx-auto pt-24">
@@ -2072,7 +2072,7 @@ function FeaturesPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' 
       <section className="py-24 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">Ready to Transform Your School?</h2>
-          <p className="text-white/60 text-lg mb-8">Join 500+ schools already using TEECHA-AI to simplify academic management.</p>
+          <p className="text-white/60 text-lg mb-8">Join 500+ schools already using KUMO-AI to simplify academic management.</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button onClick={() => onNavigate('signup')} className="w-full sm:w-auto bg-[#ffd700] text-black px-8 py-4 rounded-full font-semibold hover:bg-[#ffed4e] transition-all">
               Start Free Trial
@@ -2199,9 +2199,9 @@ function PricingPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' |
       
       {/* Hero Section */}
       <section className="relative min-h-[60vh] flex items-center justify-center px-6 overflow-hidden">
-        {/* TEECHA-AI Background Text */}
+        {/* KUMO-AI Background Text */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-          <span className="text-[20vw] font-bold text-white/[0.03] blur-sm">TEECHA-AI</span>
+          <span className="text-[20vw] font-bold text-white/[0.03] blur-sm">KUMO-AI</span>
         </div>
         <div className="bg-text-blur">PRICE</div>
         <div className="relative z-10 text-center max-w-4xl mx-auto pt-24">
@@ -2399,7 +2399,7 @@ function PublicNav({ onNavigate, currentPage }: { onNavigate: (page: 'landing' |
           <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center">
             <MessageCircle className="w-4 h-4 text-white" />
           </div>
-          <span className="text-white font-semibold text-lg tracking-wide">TEECHA-AI</span>
+          <span className="text-white font-semibold text-lg tracking-wide">KUMO-AI</span>
         </button>
 
         {/* Desktop Links */}
@@ -2479,7 +2479,7 @@ function SimpleFooter({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' 
             <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center">
               <MessageCircle className="w-5 h-5 text-white" />
             </div>
-            <span className="text-white font-semibold">TEECHA-AI</span>
+            <span className="text-white font-semibold">KUMO-AI</span>
           </div>
           
           <div className="flex items-center gap-6 text-sm">
@@ -2489,7 +2489,7 @@ function SimpleFooter({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' 
             <button onClick={() => onNavigate('contact')} className="text-white/50 hover:text-white transition-colors">Contact</button>
           </div>
           
-          <p className="text-white/30 text-sm">© 2024 TEECHA-AI. All rights reserved.</p>
+          <p className="text-white/30 text-sm">© 2024 KUMO-AI. All rights reserved.</p>
         </div>
       </div>
     </footer>
@@ -2524,7 +2524,7 @@ function WhatsAppSupportWidget() {
       target="_blank" 
       rel="noopener noreferrer"
       className="whatsapp-floating-btn"
-      title="Chat with TEECHA-AI Support"
+      title="Chat with KUMO-AI Support"
     >
       <div className="relative">
         <MessageCircle className="w-6 h-6" />
@@ -2538,7 +2538,7 @@ function WhatsAppSupportWidget() {
 function ChatSupportWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { type: 'bot', text: 'Hi! I\'m your TEECHA-AI Global Support Assistant. How can I help you manage your school today?' }
+    { type: 'bot', text: 'Hi! I\'m your KUMO-AI Global Support Assistant. How can I help you manage your school today?' }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -2598,7 +2598,7 @@ function ChatSupportWidget() {
                 <Brain className="w-4 h-4 text-black" />
               </div>
               <div>
-                <h4 className="text-white font-medium text-sm">TEECHA-AI AI Support</h4>
+                <h4 className="text-white font-medium text-sm">KUMO-AI AI Support</h4>
                 <p className="text-green-400 text-[10px] flex items-center gap-1">
                   <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
                   Always Active
@@ -2623,7 +2623,7 @@ function ChatSupportWidget() {
             ))}
             {isTyping && (
               <div className="chat-message bot opacity-50 italic text-xs">
-                TEECHA-AI is thinking...
+                KUMO-AI is thinking...
               </div>
             )}
           </div>
@@ -2700,7 +2700,7 @@ function DashboardLayout({ children, currentPage, onNavigate }: { children: Reac
               <MessageCircle className="w-5 h-5 text-white" />
             </div>
             {!isSidebarCollapsed && (
-              <span className="text-white font-semibold text-lg">TEECHA-AI</span>
+              <span className="text-white font-semibold text-lg">KUMO-AI</span>
             )}
           </button>
           <button 
