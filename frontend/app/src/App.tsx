@@ -7,6 +7,8 @@ import { useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { authService } from './lib/auth';
 
+import { TeamSection } from './components/TeamSection';
+
 // API URL
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -143,18 +145,35 @@ function HeroSection({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' |
           </button>
         </div>
 
-        {/* Center Column - 3D Image */}
+        {/* Center Column - Animated Video */}
         <div 
           className={`w-full lg:w-1/3 flex items-center justify-center transition-all duration-1000 delay-300 ${
             isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
           }`}
         >
-          <div className="relative w-[200px] sm:w-[240px] md:w-[280px] lg:w-[320px]">
-            <img 
-              src="/hero-3d.png" 
-              alt="KUMO-AI 3D"
-              className="w-full h-auto animate-float"
-            />
+          <div className="relative w-[280px] sm:w-[320px] md:w-[360px] lg:w-[400px] aspect-square">
+            {/* Animated Video Placeholder - Auto-removes background if transparent webm/mov used */}
+            <video 
+              src="/hero-animation.webm" 
+              autoPlay 
+              loop 
+              muted 
+              playsInline
+              className="w-full h-full object-contain animate-float"
+              poster="/hero-3d.png" // Fallback
+            >
+              <source src="/hero-animation.webm" type="video/webm" />
+              <source src="/hero-animation.mp4" type="video/mp4" />
+              {/* Fallback to image if video fails or not supported */}
+              <img 
+                src="/hero-3d.png" 
+                alt="KUMO-AI Intelligence"
+                className="w-full h-full object-contain"
+              />
+            </video>
+            
+            {/* Decorative Glow */}
+            <div className="absolute inset-0 bg-[#ffd700]/20 blur-3xl rounded-full -z-10 animate-pulse" />
           </div>
         </div>
 
@@ -5239,6 +5258,8 @@ function App() {
           <main>
             <HeroSection onNavigate={navigateTo} />
             <FeaturesSection />
+            <TeamSection />
+            <HowItWorksSection />
             <HowItWorksSection />
             <VisionMissionSection />
             <PricingSection />
