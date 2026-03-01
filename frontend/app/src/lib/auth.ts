@@ -330,7 +330,6 @@ class AuthService {
     async getPaymentHistory(): Promise<any> {
         return this.request('/payment/history', { method: 'GET' });
     }
-}
 
     async getTeachers(): Promise<any> {
         return this.request('/teachers', { method: 'GET' });
