@@ -4103,7 +4103,7 @@ function AnalyticsPage({ onNavigate: _onNavigate }: { onNavigate: (page: string)
 }
 
 // Recharge Page - Subscription Plans with Paystack Integration
-function RechargePage({ onNavigate }: { onNavigate: (page: string) => void }) {
+function RechargePage({ onNavigate: _onNavigate }: { onNavigate: (page: string) => void }) {
   const { user: _user } = useAuth();
   const [subscription, setSubscription] = useState<any>(null);
   const [currency, setCurrency] = useState('NGN');
