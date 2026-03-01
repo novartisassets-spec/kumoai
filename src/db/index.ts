@@ -349,7 +349,7 @@ export class Database {
                     statements.push(current.trim());
                 }
             } else {
-                statements = sql.split(';').map(st => st.trim()).filter(st => st.length > 0 && !st.startsWith('--'));
+                statements = sql.split(';').map(st => st.trim()).filter(st => st.length > 0);
             }
 
             for (const statement of statements) {

@@ -137,6 +137,7 @@ export class EscalationAuditService {
                     e.origin_agent,
                     e.reason,
                     e.priority,
+                    e.updated_at,
                     (SELECT decision_summary FROM escalation_audit_log 
                      WHERE escalation_id = e.id AND event_type = 'DECISION_MADE' LIMIT 1) as decision,
                     (SELECT MAX(event_timestamp) FROM escalation_audit_log 

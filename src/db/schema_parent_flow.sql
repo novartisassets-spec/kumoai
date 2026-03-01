@@ -32,6 +32,15 @@ CREATE TABLE IF NOT EXISTS parent_registry (
     UNIQUE(school_id, parent_phone)  -- One parent per school per phone
 );
 
+-- Ensure all columns exist for parent_registry
+ALTER TABLE parent_registry ADD COLUMN IF NOT EXISTS parent_access_token TEXT UNIQUE;
+ALTER TABLE parent_registry ADD COLUMN IF NOT EXISTS token_generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE parent_registry ADD COLUMN IF NOT EXISTS token_expires_at TIMESTAMP;
+ALTER TABLE parent_registry ADD COLUMN IF NOT EXISTS created_by_admin_phone TEXT;
+ALTER TABLE parent_registry ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE parent_registry ALTER COLUMN parent_access_token SET NOT NULL;
+ALTER TABLE parent_registry ALTER COLUMN token_expires_at SET NOT NULL;
+
 -- Step 3: Parent-to-Children Mapping
 -- Links identified parent to all their children
 -- Multiple children per parent is supported

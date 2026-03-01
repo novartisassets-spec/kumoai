@@ -17,6 +17,11 @@ declare global {
     }
 }
 
+export interface AuthRequest extends Request {
+    user?: UserPayload;
+    tokenJti?: string;
+}
+
 /**
  * Middleware to authenticate JWT token
  * Supports both Authorization header and query parameter (for SSE)

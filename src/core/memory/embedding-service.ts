@@ -67,7 +67,7 @@ export class EmbeddingService {
 
                 const results = rows.map(r => ({
                     text: r.summary_text,
-                    similarity: EmbeddingService.cosineSimilarity(queryEmbedding, JSON.parse(r.embedding))
+                    similarity: EmbeddingService.cosineSimilarity(queryEmbedding, typeof r.embedding === 'string' ? JSON.parse(r.embedding) : r.embedding)
                 }));
 
                 results.sort((a, b) => b.similarity - a.similarity);

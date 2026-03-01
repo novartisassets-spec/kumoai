@@ -2987,7 +2987,15 @@ function DashboardOverview({ onNavigate }: { onNavigate: (page: string) => void 
 
           {/* Balance/Stats Display */}
           <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-            <p className="text-white/50 text-xs mb-1">Active Students</p>
+            <div className="flex justify-between items-start mb-1">
+              <p className="text-white/50 text-xs">Active Students</p>
+              <button 
+                onClick={() => onNavigate('recharge')}
+                className="text-[#ffd700] text-[10px] uppercase tracking-wider font-bold hover:underline"
+              >
+                Recharge / Upgrade
+              </button>
+            </div>
             <p className="text-3xl font-bold text-white mb-3">{stats?.studentsCount?.toLocaleString() || '0'}</p>
             <div className="flex items-center gap-2">
               {(stats?.pendingMarksCount > 0 || stats?.pendingTransactionsCount > 0) && (
@@ -5001,7 +5009,7 @@ function App() {
     console.log('[App] navigateTo called with page:', page);
     setCurrentPage(page);
     // Update URL without page reload for dashboard pages
-    if (['dashboard', 'users', 'academics', 'reports', 'analytics', 'settings', 'profile', 'connect'].includes(page)) {
+    if (['dashboard', 'users', 'academics', 'reports', 'analytics', 'settings', 'profile', 'connect', 'recharge'].includes(page)) {
       window.history.pushState({}, '', `/${page}`);
     } else {
       window.history.pushState({}, '', '/');

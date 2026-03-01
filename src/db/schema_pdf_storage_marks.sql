@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS student_mark_entry (
     assessment_score DECIMAL(5,2) GENERATED ALWAYS AS (ca1 + ca2) STORED,
     midterm_score DECIMAL(5,2) DEFAULT 0,
     exam_score DECIMAL(5,2) DEFAULT 0,
-    total_score DECIMAL(5,2) GENERATED ALWAYS AS (assessment_score + midterm_score + exam_score) STORED,
+    total_score DECIMAL(5,2) GENERATED ALWAYS AS (ca1 + ca2 + midterm_score + exam_score) STORED,
     grade TEXT,  -- A, B, C, D, F etc
     status TEXT CHECK(status IN ('draft', 'submitted', 'confirmed')) DEFAULT 'draft',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
