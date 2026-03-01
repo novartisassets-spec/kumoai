@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import { authenticateToken, AuthRequest } from '../middleware/auth.middleware';
 import { logger } from '../../utils/logger';
+import { SubscriptionService } from '../../services/subscription.service';
 
 const router = Router();
 
