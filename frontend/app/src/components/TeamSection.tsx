@@ -1,5 +1,8 @@
+import { useEffect, useRef, useState } from 'react';
+import { Star, Linkedin, Twitter } from 'lucide-react';
+
 // Team Section - Luxury Morphism Design
-function TeamSection() {
+export function TeamSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 
