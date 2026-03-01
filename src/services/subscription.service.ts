@@ -86,9 +86,13 @@ export class SubscriptionService {
             );
 
             // 2. Calculate Dates
+            const months = parseInt(termMonths.toString()) || 3;
             const startDate = new Date();
             const endDate = new Date();
-            endDate.setMonth(endDate.getMonth() + termMonths);
+            endDate.setMonth(endDate.getMonth() + months);
+            
+            // Set to end of day for consistency
+            endDate.setHours(23, 59, 59, 999);
 
             // 3. Update School Plan
             await db.run(

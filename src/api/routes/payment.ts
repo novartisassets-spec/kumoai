@@ -236,30 +236,12 @@ router.get('/verify/:reference', authenticateToken, async (req: AuthRequest, res
     if (status === 'success') {
       const amountInMajor = amount / 100;
       
-      await new Promise<void>((resolve, reject) => {
-        db.getDB().run(
-          `UPDATE subscription_payments 
-           SET payment_status = 'success', paid_at = CURRENT_TIMESTAMP, payment_method = 'bank_transfer'
-           WHERE id = ?`,
-          [payment.id],
-          (err: any) => err ? reject(err) : resolve()
-        );
-      });
-
-      const startDate = new Date();
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + payment.term_months);
-
-      await new Promise<void>((resolve, reject) => {
-        db.getDB().run(
-          `UPDATE schools 
-           SET subscription_plan = ?, subscription_status = 'active', 
-               subscription_start_date = ?, subscription_end_date = ?
-           WHERE id = ?`,
-          [payment.plan_name, startDate, endDate, schoolId],
-          (err: any) => err ? reject(err) : resolve()
-        );
-      });
+      await SubscriptionService.handlePaymentSuccess(
+        reference,
+        schoolId!,
+        payment.plan_name,
+        payment.term_months || 3
+      );
 
       return res.json({ 
         success: true, 
