@@ -2,7 +2,7 @@ import { Router, Response, Request } from 'express';
 import { db } from '../../db';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { authenticateToken, AuthRequest } from '../middleware/auth.middleware';
 import { logger } from '../../utils/logger';
 
 const router = Router();
