@@ -182,22 +182,8 @@ export function ConnectAICard({ schoolId, onNavigate }: { schoolId: string; onNa
     const [loading, setLoading] = useState(true);
     const token = localStorage.getItem('kumo_access_token');
 
-    // Don't try to fetch if schoolId is empty
-    if (!schoolId) {
-        return (
-            <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-white/10" />
-                    <div className="flex-1">
-                        <div className="h-5 bg-white/10 rounded w-1/3 mb-2" />
-                        <div className="h-4 bg-white/10 rounded w-1/4" />
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
     const fetchStatus = useCallback(async () => {
+        if (!schoolId) return;
         try {
             const response = await fetch(`${API_URL}/whatsapp/status/${schoolId}`, {
                 headers: {
@@ -216,10 +202,26 @@ export function ConnectAICard({ schoolId, onNavigate }: { schoolId: string; onNa
     }, [schoolId, token]);
 
     useEffect(() => {
+        if (!schoolId) return;
         fetchStatus();
         const interval = setInterval(fetchStatus, 10000);
         return () => clearInterval(interval);
-    }, [fetchStatus]);
+    }, [fetchStatus, schoolId]);
+
+    // Don't try to fetch if schoolId is empty
+    if (!schoolId) {
+        return (
+            <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-white/10" />
+                    <div className="flex-1">
+                        <div className="h-5 bg-white/10 rounded w-1/3 mb-2" />
+                        <div className="h-4 bg-white/10 rounded w-1/4" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (loading) {
         return (

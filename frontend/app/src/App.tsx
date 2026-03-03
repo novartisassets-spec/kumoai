@@ -2451,32 +2451,6 @@ function PricingPage({ onNavigate }: { onNavigate: (page: 'landing' | 'signup' |
   );
 }
 
-      {/* FAQ */}
-      <section className="py-24 px-6 bg-black/20">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-white text-center mb-12">Frequently Asked Questions</h2>
-          <div className="space-y-4">
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-              <h3 className="text-white font-semibold mb-2">Can I change plans later?</h3>
-              <p className="text-white/60 text-sm">Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-              <h3 className="text-white font-semibold mb-2">Is there a setup fee?</h3>
-              <p className="text-white/60 text-sm">No setup fees for Starter and Professional plans. Enterprise plans may have a one-time setup fee depending on requirements.</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-              <h3 className="text-white font-semibold mb-2">What payment methods do you accept?</h3>
-              <p className="text-white/60 text-sm">We accept credit cards, bank transfers, and mobile money payments. Enterprise customers can also pay via invoice.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <SimpleFooter onNavigate={onNavigate} />
-    </div>
-  );
-}
-
 // Public Navigation Component
 function PublicNav({ onNavigate, currentPage }: { onNavigate: (page: 'landing' | 'signup' | 'login' | 'contact' | 'docs' | 'faqs' | 'features' | 'pricing') => void, currentPage: string }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -4775,19 +4749,9 @@ function SettingsPage({ onNavigate }: { onNavigate: (page: string) => void }) {
   const [, setTerms] = useState<any[]>([]);
   const schoolId = user?.schoolId;
 
-  // Show error if no schoolId (not logged in properly)
-  if (!schoolId) {
-    return (
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6">
-          <p className="text-red-400">Error: Unable to load school information. Please log out and log in again.</p>
-        </div>
-      </div>
-    );
-  }
-
   // Fetch setup status, school info and terms on mount
   useEffect(() => {
+    if (!schoolId) return;
     const fetchSettingsData = async () => {
       try {
         const [schoolRes, termsRes] = await Promise.all([
@@ -4811,6 +4775,17 @@ function SettingsPage({ onNavigate }: { onNavigate: (page: string) => void }) {
     
     fetchSettingsData();
   }, [schoolId]);
+
+  // Show error if no schoolId (not logged in properly)
+  if (!schoolId) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6">
+          <p className="text-red-400">Error: Unable to load school information. Please log out and log in again.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (showWizard) {
     return (

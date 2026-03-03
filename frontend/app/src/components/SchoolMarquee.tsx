@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react';
-
 // School Marquee - Horizontal Infinite Scroll of Top African Schools
 export function SchoolMarquee() {
   const schools = [
