@@ -332,6 +332,17 @@ export class ParentAgent extends BaseAgent {
                     generatedBy: 'Parent Agent'
                 });
 
+                // 💾 PERSISTENCE: Save to database
+                const { PDFStorageRepository } = await import('../../db/repositories/pdf-storage.repo');
+                await PDFStorageRepository.storePDFDocument(
+                    schoolId,
+                    parentRecord.parent_id,
+                    'student_report_card',
+                    pdfResult.filePath,
+                    pdfResult.fileName,
+                    pdfResult.cdnUrl
+                );
+
                 const termDisplayName = termInfo?.term_name || (requestedTerm === 'last_term' ? 'Last Term' : 'Current Term');
 
                 return {
@@ -339,7 +350,7 @@ export class ParentAgent extends BaseAgent {
                     reply_text: `I've retrieved ${studentName}'s ${termDisplayName} report card. It shows an average of ${releasedData.average}% and a class position of ${releasedData.position}. Attached is the full report!`,
                     action_required: 'NONE',
                     delivery_type: 'document',
-                    action_payload: { pdf_path: pdfResult.filePath },
+                    action_payload: { pdf_path: pdfResult.cdnUrl || pdfResult.filePath },
                     confidence_score: 1.0,
                     session_active: true
                 };

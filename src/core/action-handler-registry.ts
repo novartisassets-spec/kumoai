@@ -306,9 +306,20 @@ class DeliverStudentPDFHandler implements ActionHandler {
                 generatedBy: 'Action Handler'
             });
 
+            // 💾 PERSISTENCE: Save to database
+            const { PDFStorageRepository } = await import('../db/repositories/pdf-storage.repo');
+            await PDFStorageRepository.storePDFDocument(
+                schoolId,
+                message.identity?.userId || 'SYSTEM',
+                'student_report_card',
+                pdfResult.filePath,
+                pdfResult.fileName,
+                pdfResult.cdnUrl
+            );
+
             if (pdfResult.filePath) {
                 output.reply_text = `📄 Here's ${output.action_payload?.student_name || 'your child'}'s report card! It shows an average of ${releasedData.average}% and a class position of ${releasedData.position}.`;
-                output.action_payload = { ...output.action_payload, pdf_path: pdfResult.filePath };
+                output.action_payload = { ...output.action_payload, pdf_path: pdfResult.cdnUrl || pdfResult.filePath };
             } else {
                 output.reply_text = "I couldn't generate the report. Please try again.";
                 output.action_required = 'NONE';
@@ -486,6 +497,9 @@ class EscalatePaymentHandler implements ActionHandler {
         try {
             const { EscalationServiceV2 } = await import('../services/escalation-v2');
             
+            const reason = `Parent submitted payment receipt for ₦${amount}`;
+            const messageToAdmin = `Parent ${message.identity?.name || 'Staff'} submitted a payment receipt for ₦${amount}. Please verify the transaction.`;
+
             // Create payment escalation
             const escalationId = await EscalationServiceV2.pauseForEscalation({
                 origin_agent: 'PA',
@@ -497,7 +511,7 @@ class EscalatePaymentHandler implements ActionHandler {
                 pause_message_id: `MSG-${Date.now()}`,
                 user_name: message.identity?.name || 'Parent',
                 user_role: 'parent',
-                reason: `Parent submitted payment receipt for ₦${amount}`,
+                reason: reason,
                 what_agent_needed: 'Verify payment receipt and confirm transaction',
                 context: {
                     amount,
@@ -509,9 +523,29 @@ class EscalatePaymentHandler implements ActionHandler {
             });
 
             output.reply_text = `✅ Your payment receipt for ₦${amount} has been submitted to the school administrator for verification.\n\nYou'll receive confirmation once it's processed.`;
+            
+            // Set admin_escalation for dispatcher notification
+            output.admin_escalation = {
+                required: true,
+                urgency: 'medium',
+                type: 'PAYMENT_CONFIRMATION',
+                reason: reason,
+                message_to_admin: messageToAdmin,
+                requested_decision: 'CONFIRM_PAYMENT',
+                allowed_actions: ['CONFIRM', 'REJECT'],
+                context: {
+                    amount,
+                    payment_date: date,
+                    sender_name: sender,
+                    transaction_id,
+                    receipt_image_path: imagePath
+                },
+                escalation_id: escalationId
+            };
+
             output.action_required = 'NONE';
             
-            logger.info({ escalationId, amount, schoolId }, 'Payment escalation created');
+            logger.info({ escalationId, amount, schoolId }, 'Payment escalation created and tagged for dispatcher');
         } catch (error) {
             logger.error({ error, amount, schoolId }, 'ESCALATE_PAYMENT failed');
             output.reply_text = "I couldn't submit your payment receipt. Please try again or contact the school directly.";

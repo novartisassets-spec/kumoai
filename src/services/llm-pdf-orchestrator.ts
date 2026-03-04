@@ -385,8 +385,8 @@ export class LLMPDFOrchestrator {
                     document_id, session_id, school_id, teacher_id, 
                     template_type, file_path, file_name,
                     llm_instruction_id, confidence_level,
-                    generated_at, reasoning
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    generated_at, reasoning, cdn_url
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     pdfResult.documentId,
                     context.sessionId,
@@ -398,7 +398,8 @@ export class LLMPDFOrchestrator {
                     instruction.instructionId,
                     instruction.context.confidenceLevel,
                     pdfResult.generatedAt,
-                    instruction.reasoning
+                    instruction.reasoning,
+                    pdfResult.cdnUrl || null
                 ],
                 (err) => {
                     if (err) {

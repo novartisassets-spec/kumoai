@@ -89,6 +89,23 @@ async function standardize() {
             }
         }
 
+        // 5. pdf_generation_audit columns
+        const pdfAuditCols = [
+            ['cdn_url', 'TEXT']
+        ];
+
+        for (const [col, type] of pdfAuditCols) {
+            const check = await pool.query(`
+                SELECT 1 FROM information_schema.columns 
+                WHERE table_name='pdf_generation_audit' AND column_name=$1
+            `, [col]);
+            
+            if (check.rowCount === 0) {
+                console.log(`Adding column: pdf_generation_audit.${col}`);
+                await pool.query(`ALTER TABLE pdf_generation_audit ADD COLUMN ${col} ${type}`);
+            }
+        }
+
         console.log('✅ Database sync completed.');
         process.exit(0);
     } catch (error) {
