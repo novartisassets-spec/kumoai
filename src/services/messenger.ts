@@ -65,8 +65,11 @@ export class MessengerService {
             return;
         }
 
-        if (!fs.existsSync(documentPath)) {
-            logger.error({ to, schoolId, documentPath }, 'Document file does not exist');
+        // Check if documentPath is a URL
+        const isUrl = documentPath.startsWith('http://') || documentPath.startsWith('https://');
+
+        if (!isUrl && !fs.existsSync(documentPath)) {
+            logger.error({ to, schoolId, documentPath }, 'Document file does not exist locally and is not a URL');
             throw new Error(`Document not found: ${documentPath}`);
         }
 
@@ -79,7 +82,7 @@ export class MessengerService {
             documentCaption: caption,
             quotedMessageId
         });
-        logger.info({ to, schoolId, documentPath, hasQuote: !!quotedMessageId }, 'PDF document sent');
+        logger.info({ to, schoolId, documentPath, isUrl, hasQuote: !!quotedMessageId }, 'PDF document sent');
     }
 
     /**

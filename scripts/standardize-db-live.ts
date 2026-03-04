@@ -72,6 +72,23 @@ async function standardize() {
             }
         }
 
+        // 4. pdf_documents columns
+        const pdfDocsCols = [
+            ['cdn_url', 'TEXT']
+        ];
+
+        for (const [col, type] of pdfDocsCols) {
+            const check = await pool.query(`
+                SELECT 1 FROM information_schema.columns 
+                WHERE table_name='pdf_documents' AND column_name=$1
+            `, [col]);
+            
+            if (check.rowCount === 0) {
+                console.log(`Adding column: pdf_documents.${col}`);
+                await pool.query(`ALTER TABLE pdf_documents ADD COLUMN ${col} ${type}`);
+            }
+        }
+
         console.log('✅ Database sync completed.');
         process.exit(0);
     } catch (error) {

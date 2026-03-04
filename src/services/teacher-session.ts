@@ -14,7 +14,7 @@ export interface TeacherSession {
     created_at: string;
     expires_at: string;
     last_activity: string;
-    is_active: number;
+    is_active: boolean;
     context: any; // Added for unified context storage (PDF drafts, etc)
 }
 

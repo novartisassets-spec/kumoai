@@ -631,6 +631,7 @@ ${JSON.stringify(escalation.context, null, 2)}
         return {
             to: message.from,
             body: output.reply_text,
+            mediaPath: (output as any).delivery_type === 'document' ? (output as any).action_payload?.pdf_path : undefined,
             actions: actions.length > 0 ? actions : undefined,
             delivery_type: (output as any).delivery_type || 'text'
         };

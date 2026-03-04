@@ -299,7 +299,7 @@ export class MessageRouter {
         return new Promise((resolve) => {
             db.getDB().get(
                 `SELECT school_id FROM parent_registry WHERE parent_phone = ? AND is_active = true LIMIT 1`,
-                [normalizedFrom],
+                [phone],
                 (err, row: any) => resolve(row?.school_id || null)
             );
         });

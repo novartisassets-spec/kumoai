@@ -560,9 +560,9 @@ Keep it co-pilot-like and professional. Use JSON.`;
                   (output as any).delivery_type = 'document';
                   (output as any).action_payload = {
                       ...output.action_payload,
-                      pdf_path: result.filePath
+                      pdf_path: result.cdnUrl || result.filePath
                   };
-                  logger.info({ filePath: result.filePath }, '📊 Broadsheet generated');
+                  logger.info({ filePath: result.filePath, hasCdn: !!result.cdnUrl }, '📊 Broadsheet generated');
               } else {
                   (message as any).system_context = `SYSTEM: No confirmed marks found for ${classLevel}. Explain this to the teacher.`;
                   output.reply_text = ""; // Let LLM synthesize
@@ -608,7 +608,7 @@ Keep it co-pilot-like and professional. Use JSON.`;
                       (output as any).delivery_type = 'document';
                       (output as any).action_payload = {
                           ...output.action_payload,
-                          pdf_path: result.filePath
+                          pdf_path: result.cdnUrl || result.filePath
                       };
                       return output;
                   }
@@ -642,16 +642,17 @@ Keep it co-pilot-like and professional. Use JSON.`;
                       teacherId || 'SYSTEM',
                       config.template,
                       pdfResult.filePath,
-                      pdfResult.fileName
+                      pdfResult.fileName,
+                      pdfResult.cdnUrl
                   );
 
                   (output as any).delivery_type = 'document';
                   (output as any).action_payload = {
                       ...output.action_payload,
-                      pdf_path: pdfResult.filePath
+                      pdf_path: pdfResult.cdnUrl || pdfResult.filePath
                   };
                   
-                  logger.info({ filePath: pdfResult.filePath }, '✅ PDF generated on-demand by LLM');
+                  logger.info({ filePath: pdfResult.filePath, hasCdn: !!pdfResult.cdnUrl }, '✅ PDF generated on-demand by LLM');
               } catch (pdfErr) {
                   logger.error({ pdfErr }, '❌ Failed to generate on-demand PDF');
               }
@@ -1382,13 +1383,16 @@ Keep it co-pilot-like and professional. Use JSON.`;
           });
           
           // Generate preview PDF
-          const pdfPath = await this.generateSetupPreviewPDF({
+          const pdfResult = await this.generateSetupPreviewPDF({
             teacherName: teacher?.name || 'Teacher',
             schoolName: school?.name || 'School',
             workload: workload as Record<string, string[]>,
             students,
-            outputDir: path.join(process.cwd(), 'storage', 'previews')
+            outputDir: path.join(process.cwd(), 'storage', 'previews'),
+            schoolId
           });
+          
+          const pdfPath = pdfResult.filePath;
           
           // Update setup state
           await TASetupRepository.updateSetup(teacherId, schoolId, {
@@ -1396,14 +1400,25 @@ Keep it co-pilot-like and professional. Use JSON.`;
             completed_steps: [...(setupData?.completed_steps || []), 'GENERATE_PREVIEW']
           });
           
-          logger.info({ teacherId, pdfPath }, '✅ Setup preview PDF generated');
+          // 💾 PERSISTENCE: Save to database
+          const { PDFStorageRepository } = await import('../../db/repositories/pdf-storage.repo');
+          await PDFStorageRepository.storePDFDocument(
+              schoolId,
+              teacherId,
+              'registration', // Closest match for setup preview
+              pdfResult.filePath,
+              path.basename(pdfResult.filePath),
+              pdfResult.cdnUrl
+          );
+
+          logger.info({ teacherId, pdfPath }, '✅ Setup preview PDF generated and stored');
           
           // Send PDF to teacher using sendDocument
           const caption = '📋 Your Setup Summary is ready! Please review the attached PDF and confirm everything looks correct.\n\nReply "Yes, looks good" to finalize your setup, or tell me what needs to be changed.';
           
           try {
-            await messenger.sendDocument(schoolId, message.from, pdfPath, caption);
-            logger.info({ teacherId, pdfPath }, '✅ Setup preview PDF sent to teacher');
+            await messenger.sendDocument(schoolId, message.from, pdfResult.cdnUrl || pdfPath, caption);
+            logger.info({ teacherId, pdfPath: pdfResult.cdnUrl || pdfPath }, '✅ Setup preview PDF sent to teacher');
           } catch (sendError) {
             logger.error({ error: sendError, teacherId, pdfPath }, '❌ Failed to send PDF document');
           }
@@ -1623,8 +1638,9 @@ Keep it co-pilot-like and professional. Use JSON.`;
     workload: Record<string, string[]>;
     students: any[];
     outputDir: string;
-  }): Promise<string> {
-    const { teacherName, schoolName, workload, students, outputDir } = params;
+    schoolId: string;
+  }): Promise<{ filePath: string; cdnUrl?: string }> {
+    const { teacherName, schoolName, workload, students, outputDir, schoolId } = params;
     
     try {
       const fs = await import('fs');
@@ -1634,11 +1650,6 @@ Keep it co-pilot-like and professional. Use JSON.`;
       if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
       }
-      
-      // Generate unique filename
-      const timestamp = Date.now();
-      const fileName = `TA_SETUP_PREVIEW_${teacherName.replace(/\s+/g, '_')}_${timestamp}.pdf`;
-      const filePath = path.join(outputDir, fileName);
       
       // Use the pdfGenerator to create the preview
       const { pdfGenerator } = await import('../../services/pdf-generator');
@@ -1652,7 +1663,7 @@ Keep it co-pilot-like and professional. Use JSON.`;
       }));
       
       const result = await pdfGenerator.generatePDF({
-        schoolId: 'preview',
+        schoolId,
         schoolName,
         templateType: 'teacher_setup_preview',
         templateData: {
@@ -1661,14 +1672,14 @@ Keep it co-pilot-like and professional. Use JSON.`;
           students,
           generatedAt: new Date().toLocaleString()
         },
-        timestamp,
+        timestamp: Date.now(),
         generatedBy: 'TA Setup Wizard',
         orientation: 'portrait'
       });
       
       logger.info({ filePath: result.filePath, teacherName }, '✅ Setup preview PDF generated');
       
-      return result.filePath;
+      return { filePath: result.filePath, cdnUrl: result.cdnUrl };
     } catch (error) {
       logger.error({ error, teacherName }, '❌ Failed to generate setup preview PDF');
       throw error;

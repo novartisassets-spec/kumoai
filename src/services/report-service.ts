@@ -197,12 +197,14 @@ export class ReportService {
                 generatedBy || 'SYSTEM',
                 'batch_report_cards', 
                 pdfResult.filePath,
-                pdfResult.fileName
+                pdfResult.fileName,
+                pdfResult.cdnUrl
             );
 
             return {
                 documentId: docId,
                 filePath: pdfResult.filePath,
+                cdnUrl: pdfResult.cdnUrl,
                 studentCount: students.length
             };
 
@@ -326,10 +328,11 @@ export class ReportService {
                 generatedBy,
                 'broadsheet', 
                 pdfResult.filePath,
-                pdfResult.fileName
+                pdfResult.fileName,
+                pdfResult.cdnUrl
             );
 
-            return { documentId: docId, filePath: pdfResult.filePath };
+            return { documentId: docId, filePath: pdfResult.filePath, cdnUrl: pdfResult.cdnUrl };
 
         } catch (error) {
             logger.error({ error }, '❌ [REPORT_SERVICE] Broadsheet generation failed');

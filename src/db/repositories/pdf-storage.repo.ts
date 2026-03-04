@@ -27,7 +27,8 @@ export class PDFStorageRepository {
         teacherId: string,
         documentType: 'attendance' | 'marks_sheet' | 'registration' | 'batch_report_cards' | 'student_report_card' | 'broadsheet',
         filePath: string,
-        fileName: string
+        fileName: string,
+        cdnUrl?: string
     ): Promise<string> {
         const documentId = require('uuid').v4();
 
@@ -38,9 +39,9 @@ export class PDFStorageRepository {
 
             return new Promise((resolve, reject) => {
                 db.getDB().run(
-                    `INSERT INTO pdf_documents (id, school_id, teacher_id, document_type, file_path, file_name, file_size, document_hash, status)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'generated')`,
-                    [documentId, schoolId, teacherId, documentType, filePath, fileName, stats.size, documentHash],
+                    `INSERT INTO pdf_documents (id, school_id, teacher_id, document_type, file_path, file_name, file_size, document_hash, status, cdn_url)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'generated', ?)`,
+                    [documentId, schoolId, teacherId, documentType, filePath, fileName, stats.size, documentHash, cdnUrl || null],
                     (err) => {
                         if (err) {
                             logger.error({ error: err, documentId }, 'Failed to store PDF document metadata');
@@ -86,7 +87,7 @@ export class PDFStorageRepository {
     static async confirmPDFContent(documentId: string, notes?: string): Promise<void> {
         return new Promise((resolve, reject) => {
             db.getDB().run(
-                `UPDATE pdf_documents SET status = 'confirmed', confirmed_by_teacher = 1, confirmed_at = CURRENT_TIMESTAMP, confirmation_notes = ?
+                `UPDATE pdf_documents SET status = 'confirmed', confirmed_by_teacher = true, confirmed_at = CURRENT_TIMESTAMP, confirmation_notes = ?
                  WHERE id = ?`,
                 [notes || '', documentId],
                 (err) => {

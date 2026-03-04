@@ -496,7 +496,7 @@ export async function changePassword(userId: string, currentPassword: string, ne
 export async function requestPasswordReset(phone: string): Promise<string> {
     const user: any = await new Promise((resolve) => {
         db.getDB().get(
-    const sql = `SELECT id, email FROM users WHERE phone = ? AND is_active = true`;
+            `SELECT id, email FROM users WHERE phone = ? AND is_active = true`,
             [phone],
             (err, row) => resolve(row)
         );
