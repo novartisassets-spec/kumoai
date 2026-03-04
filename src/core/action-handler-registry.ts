@@ -784,7 +784,7 @@ export class ActionHandlerRegistry {
             
             const parentRecord = await new Promise<any>((resolve) => {
                 db.getDB().get(
-                    `SELECT parent_id FROM parent_registry WHERE parent_phone = ? AND school_id = ? AND is_active = 1`,
+                    `SELECT parent_id FROM parent_registry WHERE parent_phone = ? AND school_id = ? AND is_active = true`,
                     [parentPhone, schoolId],
                     (err, row) => resolve(row)
                 );

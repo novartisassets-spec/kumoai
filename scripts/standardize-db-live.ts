@@ -51,7 +51,9 @@ async function standardize() {
             ['broadsheet_assignments', 'is_active'],
             ['student_marks_indexed', 'confirmed_by_teacher'],
             ['student_marks_indexed', 'manual_entry'],
-            ['student_attendance_records', 'manual_entry']
+            ['student_attendance_records', 'manual_entry'],
+            ['parent_registry', 'is_active'],
+            ['setup_state', 'is_active']
         ];
 
         for (const [table, col] of boolCols) {

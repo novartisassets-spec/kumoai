@@ -449,15 +449,22 @@ export class Database {
             'present', 'manual_entry', 'has_midterm', 'rank_students'
         ];
         
-        booleanFields.forEach(field => {
-            // Match "field = 1" or "field = 0" (case insensitive)
-            const regex1 = new RegExp(`\\b${field}\\s*=\\s*1\\b`, 'gi');
-            const regex0 = new RegExp(`\\b${field}\\s*=\\s*0\\b`, 'gi');
-            newSql = newSql.replace(regex1, `${field} = true`);
-            newSql = newSql.replace(regex0, `${field} = false`);
-        });
-
-        // 6. Replace ? placeholders with $1, $2, etc.
+                booleanFields.forEach(field => {
+                    // Match "field = 1" or "field = 0" (case insensitive), including optional table aliases
+                    const regex1 = new RegExp(`(?:\\w+\\.)?\\b${field}\\s*=\\s*1\\b`, 'gi');
+                    const regex0 = new RegExp(`(?:\\w+\\.)?\\b${field}\\s*=\\s*0\\b`, 'gi');
+                    
+                    // We use a replacement function to preserve the alias if it exists
+                    newSql = newSql.replace(regex1, (match) => {
+                        const parts = match.split('=');
+                        return `${parts[0].trim()} = true`;
+                    });
+                    newSql = newSql.replace(regex0, (match) => {
+                        const parts = match.split('=');
+                        return `${parts[0].trim()} = false`;
+                    });
+                });
+                // 6. Replace ? placeholders with $1, $2, etc.
         if (params.length > 0 || newSql.includes('?')) {
             let paramIndex = 0;
             newSql = newSql.replace(/\?/g, () => {

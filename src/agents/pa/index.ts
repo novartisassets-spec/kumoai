@@ -40,7 +40,7 @@ export class ParentAgent extends BaseAgent {
                 FROM students s
                 JOIN parent_children_mapping pcm ON s.student_id = pcm.student_id
                 JOIN parent_registry pr ON pcm.parent_id = pr.parent_id
-                WHERE pr.parent_phone = ? AND pr.school_id = ? AND pr.is_active = 1
+                WHERE pr.parent_phone = ? AND pr.school_id = ? AND pr.is_active = true
                 ORDER BY s.name ASC
             `;
             db.getDB().all(sql, [parentPhone, schoolId], (err, rows: any[]) => {
@@ -161,7 +161,7 @@ export class ParentAgent extends BaseAgent {
 
             const parentRecord = await new Promise<any>((resolve) => {
                 db.getDB().get(
-                    `SELECT parent_id FROM parent_registry WHERE parent_phone = ? AND school_id = ? AND is_active = 1`,
+                    `SELECT parent_id FROM parent_registry WHERE parent_phone = ? AND school_id = ? AND is_active = true`,
                     [parentPhone, schoolId],
                     (err, row) => resolve(row)
                 );
@@ -185,7 +185,7 @@ export class ParentAgent extends BaseAgent {
         if (action === 'UNIFY_PARENT') {
             const parentRecord = await new Promise<any>((resolve) => {
                 db.getDB().get(
-                    `SELECT parent_id FROM parent_registry WHERE parent_phone = ? AND school_id = ? AND is_active = 1`,
+                    `SELECT parent_id FROM parent_registry WHERE parent_phone = ? AND school_id = ? AND is_active = true`,
                     [parentPhone, schoolId],
                     (err, row) => resolve(row)
                 );
@@ -241,7 +241,7 @@ export class ParentAgent extends BaseAgent {
         } else {
             const registryCheck: any = await new Promise((resolve) => {
                 db.getDB().get(
-                    `SELECT parent_id, parent_name FROM parent_registry WHERE parent_phone = ? AND school_id = ? AND is_active = 1`,
+                    `SELECT parent_id, parent_name FROM parent_registry WHERE parent_phone = ? AND school_id = ? AND is_active = true`,
                     [message.from, schoolId],
                     (err, row) => resolve(row)
                 );
