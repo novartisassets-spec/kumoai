@@ -1,5 +1,6 @@
 import { db } from '..';
 import { logger } from '../../utils/logger';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * TA Setup Repository
@@ -67,14 +68,14 @@ export class TASetupRepository {
         
         const sql = `
             INSERT INTO ta_setup_state 
-            (teacher_id, school_id, assigned_class, current_step, completed_steps, is_active, workload_json)
-            VALUES (?, ?, ?, ?, ?, 1, ?)
-            ON CONFLICT(teacher_id, school_id) DO UPDATE SET is_active = 1
+            (id, teacher_id, school_id, assigned_class, current_step, completed_steps, is_active, workload_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(teacher_id, school_id) DO UPDATE SET is_active = ?
         `;
         return new Promise((resolve, reject) => {
             db.getDB().run(
                 sql, 
-                [teacherId, schoolId, assignedClass, UNIFIED_STEPS[0], JSON.stringify([]), JSON.stringify({})], 
+                [uuidv4(), teacherId, schoolId, assignedClass, UNIFIED_STEPS[0], JSON.stringify([]), true, JSON.stringify({}), true], 
                 (err) => {
                     if (err) reject(err);
                     else resolve();

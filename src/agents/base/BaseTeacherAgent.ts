@@ -265,12 +265,25 @@ export abstract class BaseTeacherAgent extends BaseAgent {
     // ✅ CHECK IF TEACHER IS IN SETUP
     let isInSetup = false;
     if (teacherId) {
-      // Trust the repository state first
-      isInSetup = await TASetupRepository.isTeacherInSetup(teacherId, schoolId);
+      // 1. Get current setup state
+      const setupRecord = await TASetupRepository.getSetupState(teacherId, schoolId);
       
-      // 🛡️ AUTO-INITIALIZE FALLBACK: If NOT in setup table and NOT in users table?
-      // For now, we assume if isTeacherInSetup is false, they are either operational or not initialized.
-      // If operational (in users table), they proceed to standard handling.
+      if (setupRecord) {
+        // Use the explicit is_active flag from the database
+        isInSetup = setupRecord.is_active;
+      } else {
+        // 🛡️ AUTO-INITIALIZE FALLBACK: Teacher exists in 'users' (identity verified) 
+        // but has no entry in 'ta_setup_state'. This happens for teachers added via Dashboard 
+        // or before the setup flow was implemented.
+        logger.info({ teacherId, schoolId, agentType }, `🛡️ [${agentType}] No setup record found for recognized teacher - Auto-initializing setup wizard`);
+        try {
+          // Default to "Class 1" as placeholder; Kira will ask for the real class during setup
+          await TASetupRepository.initSetup(teacherId, schoolId, 'Class 1');
+          isInSetup = true;
+        } catch (e) {
+          logger.error({ e, teacherId }, 'Failed to auto-initialize TA setup');
+        }
+      }
       
       if (isInSetup) {
         logger.info({ teacherId, schoolId, agentType }, `🔧 [${agentType}] Teacher in SETUP phase`);

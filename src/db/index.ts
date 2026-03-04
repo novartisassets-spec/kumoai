@@ -280,6 +280,7 @@ export class Database {
             { path: path.join(__dirname, 'schema_temporal.sql'), name: 'Temporal' },
             { path: path.join(__dirname, 'schema_setup.sql'), name: 'Setup' },
             { path: path.join(__dirname, 'schema_ta_setup.sql'), name: 'TA Setup' },
+            { path: path.join(__dirname, 'schema_ta_setup_amendments.sql'), name: 'TA Setup Amendments' },
             { path: path.join(__dirname, 'schema_teacher_sessions.sql'), name: 'Teacher Sessions' },
             { path: path.join(__dirname, 'schema_memory.sql'), name: 'Memory' },
             { path: path.join(__dirname, 'schema_teacher_confirmation.sql'), name: 'Teacher Confirmation' },
@@ -326,17 +327,27 @@ export class Database {
                 let inDollarQuote = false;
                 let dollarChar = '';
                 
-                for (const part of parts) {
+                for (let i = 0; i < parts.length; i++) {
+                    const part = parts[i];
                     current += part;
+                    
+                    // Add semicolon back unless it's the last part (which didn't have one)
+                    if (i < parts.length - 1) {
+                        current += ';';
+                    }
+
                     // Check for dollar quote start/end
-                    const dollarMatch = part.match(/\$([a-zA-Z_]*)\$/);
-                    if (dollarMatch) {
-                        if (!inDollarQuote) {
-                            inDollarQuote = true;
-                            dollarChar = dollarMatch[0];
-                        } else if (dollarMatch[0] === dollarChar) {
-                            inDollarQuote = false;
-                            dollarChar = '';
+                    // Using a global search to find ALL dollar quotes in this part
+                    const dollarMatches = part.match(/\$([a-zA-Z_]*)\$/g);
+                    if (dollarMatches) {
+                        for (const match of dollarMatches) {
+                            if (!inDollarQuote) {
+                                inDollarQuote = true;
+                                dollarChar = match;
+                            } else if (match === dollarChar) {
+                                inDollarQuote = false;
+                                dollarChar = '';
+                            }
                         }
                     }
                     
@@ -408,40 +419,53 @@ export class Database {
     private convertParams(sql: string, params: any[] = []): { sql: string, params: any[] } {
         let newSql = sql;
         
-        // Convert SQLite date functions to PostgreSQL
+        // 1. Convert SQLite date functions to PostgreSQL
         newSql = newSql.replace(/datetime\('now'\)/gi, 'NOW()');
         newSql = newSql.replace(/date\('now'\)/gi, 'CURRENT_DATE');
+        newSql = newSql.replace(/CURRENT_TIMESTAMP/gi, 'NOW()');
         
-        // Convert SQLite date/datetime('now', '+/-N days/months/years') to PostgreSQL INTERVAL
-        // date('now', '-30 days') -> (CURRENT_DATE - INTERVAL '30 days')
-        // datetime('now', '+15 minutes') -> (NOW() + INTERVAL '15 minutes')
+        // 2. Convert SQLite date/datetime('now', '+/-N days/months/years') to PostgreSQL INTERVAL
         const intervalRegex = /(?:date|datetime)\('now',\s*'([-+]?\d+)\s+([^']+)'\)/gi;
         newSql = newSql.replace(intervalRegex, (match, amount, unit) => {
             const isNegative = amount.startsWith('-');
             const absAmount = amount.replace(/[-+]/g, '');
             const operator = isNegative ? '-' : '+';
             const base = match.toLowerCase().startsWith('date') ? 'CURRENT_DATE' : 'NOW()';
-            // Standardize unit (remove 's' if present)
             const cleanUnit = unit.toLowerCase().replace(/s$/, '');
             return `(${base} ${operator} INTERVAL '${absAmount} ${cleanUnit}')`;
         });
         
-        // Convert generic date(column) to (column)::date for PostgreSQL
-        // But NOT date('now') which is already handled
+        // 3. Convert generic date(column) to (column)::date
         newSql = newSql.replace(/date\((?!\s*'now'\s*)([^)]+)\)/gi, '($1)::date');
         
-        // Convert SQLite datetime(?, 'unixepoch') to PostgreSQL to_timestamp(?)
-        // datetime(?, 'unixepoch') -> to_timestamp(?)::timestamp
+        // 4. Convert SQLite datetime(?, 'unixepoch') to PostgreSQL
         newSql = newSql.replace(/datetime\(\?,\s*'unixepoch'\)/gi, 'to_timestamp(?)::timestamp');
+
+        // 5. Handle Boolean Type Mismatch (SQLite 1/0 -> PG true/false)
+        // Only convert if it looks like a boolean assignment or comparison
+        // Target common boolean columns: is_active, is_internal, is_revoked, etc.
+        const booleanFields = [
+            'is_active', 'is_internal', 'is_revoked', 'confirmed_by_teacher', 
+            'present', 'manual_entry', 'has_midterm', 'rank_students'
+        ];
         
-        if (params.length === 0) return { sql: newSql, params };
-        
-        // Replace ? placeholders with $1, $2, etc.
-        let paramIndex = 0;
-        newSql = newSql.replace(/\?/g, () => {
-            paramIndex++;
-            return `$${paramIndex}`;
+        booleanFields.forEach(field => {
+            // Match "field = 1" or "field = 0" (case insensitive)
+            const regex1 = new RegExp(`\\b${field}\\s*=\\s*1\\b`, 'gi');
+            const regex0 = new RegExp(`\\b${field}\\s*=\\s*0\\b`, 'gi');
+            newSql = newSql.replace(regex1, `${field} = true`);
+            newSql = newSql.replace(regex0, `${field} = false`);
         });
+
+        // 6. Replace ? placeholders with $1, $2, etc.
+        if (params.length > 0 || newSql.includes('?')) {
+            let paramIndex = 0;
+            newSql = newSql.replace(/\?/g, () => {
+                paramIndex++;
+                return `$${paramIndex}`;
+            });
+        }
+        
         return { sql: newSql, params };
     }
 

@@ -9,6 +9,7 @@ import { db } from '../../db';
 import { v4 as uuidv4 } from 'uuid';
 import { whatsappManager } from '../../core/transport/multi-socket-manager';
 import { SubscriptionService } from '../../services/subscription.service';
+import { TASetupRepository } from '../../db/repositories/ta-setup.repo';
 
 const router = Router();
 
@@ -507,6 +508,16 @@ router.post('/teachers', async (req: AuthRequest, res: Response) => {
                 (err) => err ? reject(err) : resolve()
             );
         });
+
+        // ✅ TA 1.1: Initialize TA setup for the new teacher
+        // Default to "Class 1" as placeholder if not provided, though typically we'll ask Kira to find out
+        try {
+            await TASetupRepository.initSetup(teacherId, schoolId, 'Class 1');
+            logger.info({ teacherId, schoolId }, 'TA Setup initialized for new teacher');
+        } catch (e) {
+            logger.error({ e, teacherId }, 'Failed to initialize TA setup');
+            // Continue anyway - the agent will auto-initialize on first message if needed
+        }
 
         logger.info({ teacherId, schoolId, name }, 'Teacher added');
 
