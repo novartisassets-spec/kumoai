@@ -598,7 +598,7 @@ class UnifyParentHandler implements ActionHandler {
             // Find or create parent record
             let parentRecord: any = await new Promise((resolve) => {
                 db.getDB().get(
-                    `SELECT parent_id, parent_name FROM parent_registry WHERE parent_phone = ? AND school_id = ? AND is_active = 1`,
+                    `SELECT parent_id, parent_name FROM parent_registry WHERE parent_phone = ? AND school_id = ? AND is_active = true`,
                     [parentPhone, schoolId],
                     (err, row) => resolve(row)
                 );

@@ -92,7 +92,7 @@ export class TeacherSessionManager {
                 created_at: now,
                 expires_at: expiresAt,
                 last_activity: now,
-                is_active: 1,
+                is_active: true,
                 context: {}
             });
 
@@ -213,7 +213,7 @@ export class TeacherSessionManager {
                             created_at: now,
                             expires_at: expiresAt,
                             last_activity: now,
-                            is_active: 1,
+                            is_active: true,
                             context: {}
                         });
                         logger.info({ sessionId, teacherId, phone }, 'Teacher session created and memory synced');
@@ -231,7 +231,7 @@ export class TeacherSessionManager {
         return new Promise((resolve, reject) => {
             db.getDB().get(
                 `SELECT * FROM teacher_sessions 
-                 WHERE token = ? AND is_active = 1 AND expires_at > datetime('now')`,
+                 WHERE token = ? AND is_active = true AND expires_at > datetime('now')`,
                 [token],
                 (err, row: any) => {
                     if (err) {
@@ -266,7 +266,7 @@ export class TeacherSessionManager {
         return new Promise((resolve, reject) => {
             db.getDB().get(
                 `SELECT * FROM teacher_sessions 
-                 WHERE session_id = ? AND is_active = 1 AND expires_at > datetime('now')`,
+                 WHERE session_id = ? AND is_active = true AND expires_at > datetime('now')`,
                 [sessionId],
                 (err, row: any) => {
                     if (err) {
@@ -337,7 +337,7 @@ export class TeacherSessionManager {
     static async terminateSession(sessionId: string): Promise<void> {
         return new Promise((resolve, reject) => {
             db.getDB().run(
-                `UPDATE teacher_sessions SET is_active = 0 WHERE session_id = ?`,
+                `UPDATE teacher_sessions SET is_active = false WHERE session_id = ?`,
                 [sessionId],
                 (err) => {
                     if (err) {
@@ -358,7 +358,7 @@ export class TeacherSessionManager {
     static async cleanupExpiredSessions(): Promise<number> {
         return new Promise((resolve, reject) => {
             db.getDB().run(
-                `UPDATE teacher_sessions SET is_active = 0 WHERE expires_at < datetime('now') AND is_active = 1`,
+                `UPDATE teacher_sessions SET is_active = false WHERE expires_at < datetime('now') AND is_active = true`,
                 function(err) {
                     if (err) {
                         logger.error({ err }, 'Failed to cleanup expired sessions');

@@ -162,7 +162,7 @@ export class TASetupRepository {
         // ✅ All checks passed - mark setup as complete
         return new Promise((resolve, reject) => {
             db.getDB().run(
-                `UPDATE ta_setup_state SET is_active = 0, completed_at = CURRENT_TIMESTAMP WHERE teacher_id = ? AND school_id = ?`,
+                `UPDATE ta_setup_state SET is_active = false, completed_at = CURRENT_TIMESTAMP WHERE teacher_id = ? AND school_id = ?`,
                 [teacherId, schoolId],
                 (err) => {
                     if (err) reject(err);
@@ -369,7 +369,7 @@ export class TASetupRepository {
                     studentId,
                     studentName,
                     classLevel || 'Unknown',
-                    present ? 1 : 0,
+                    present ? true : false,
                     markedDate,
                     termId
                 ],
@@ -635,7 +635,7 @@ export class TASetupRepository {
             db.getDB().run(
                 `INSERT INTO broadsheet_assignments 
                 (id, school_id, teacher_id, subjects, generated_at, is_active)
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 1)`,
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, true)`,
                 [broadsheetId, schoolId, teacherId, JSON.stringify(subjects)],
                 (err) => err ? reject(err) : resolve()
             );
@@ -670,7 +670,7 @@ export class TASetupRepository {
                     teacherId,
                     studentId,
                     studentName,
-                    present ? 1 : 0,
+                    present ? true : false,
                     markedDate,
                     termId,
                     manual_notes || null

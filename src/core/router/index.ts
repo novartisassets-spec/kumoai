@@ -298,8 +298,8 @@ export class MessageRouter {
     private static async findSchoolByParentPhone(phone: string): Promise<string | null> {
         return new Promise((resolve) => {
             db.getDB().get(
-                `SELECT school_id FROM parent_registry WHERE parent_phone = ? AND is_active = 1 LIMIT 1`,
-                [phone],
+                `SELECT school_id FROM parent_registry WHERE parent_phone = ? AND is_active = true LIMIT 1`,
+                [normalizedFrom],
                 (err, row: any) => resolve(row?.school_id || null)
             );
         });

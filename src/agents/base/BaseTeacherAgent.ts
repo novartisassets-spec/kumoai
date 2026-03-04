@@ -358,7 +358,7 @@ export abstract class BaseTeacherAgent extends BaseAgent {
     // ✅ TA 2.2: Load teacher's subjects for context
     const teacherSubjects: string[] = await new Promise((resolve) => {
         db.getDB().get(
-            `SELECT subjects FROM broadsheet_assignments WHERE teacher_id = ? AND school_id = ? AND is_active = 1`,
+            `SELECT subjects FROM broadsheet_assignments WHERE teacher_id = ? AND school_id = ? AND is_active = true`,
             [teacherId, schoolId],
             (err, row: any) => {
                 if (row?.subjects) resolve(JSON.parse(row.subjects));

@@ -293,7 +293,7 @@ User Input: ${userInput}
         return new Promise((resolve, reject) => {
             db.getDB().get(
                 `SELECT expires_at FROM teacher_sessions 
-                 WHERE session_id = ? AND is_active = 1`,
+                 WHERE session_id = ? AND is_active = true`,
                 [sessionId],
                 (err, row: any) => {
                     if (err) {
@@ -318,7 +318,7 @@ User Input: ${userInput}
         return new Promise((resolve, reject) => {
             db.getDB().get(
                 `SELECT session_id FROM teacher_sessions 
-                 WHERE token = ? AND is_active = 1 AND expires_at > datetime('now')`,
+                 WHERE token = ? AND is_active = true AND expires_at > datetime('now')`,
                 [token],
                 (err, row: any) => {
                     if (err) {

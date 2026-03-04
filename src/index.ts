@@ -125,7 +125,7 @@ async function main() {
         
         // Also check for any schools with existing WhatsApp sessions in DB
         try {
-            const sessions = await db.all('SELECT school_id FROM whatsapp_sessions WHERE is_active = 1', []);
+            const sessions = await db.all('SELECT school_id FROM whatsapp_sessions WHERE is_active = true', []);
             const sessionSchoolIds = new Set(sessions.map((s: any) => s.school_id));
             const schoolsWithSessions = schools.filter(s => sessionSchoolIds.has(s.id));
             // Add schools with sessions that aren't already in the list
@@ -417,7 +417,7 @@ const { webhookRouter } = require('./api/webhook-handler');
                     // First check parent_registry (where admin-added parents are)
                     parent = await new Promise<any>((resolve) => {
                         db.getDB().get(
-                            `SELECT parent_id as id, parent_name as name, school_id FROM parent_registry WHERE parent_phone = ? AND is_active = 1`,
+                            `SELECT parent_id as id, parent_name as name, school_id FROM parent_registry WHERE parent_phone = ? AND is_active = true`,
                             [normalizedFrom],
                             (err, row) => resolve(row)
                         );

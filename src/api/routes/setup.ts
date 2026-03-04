@@ -195,7 +195,7 @@ router.post('/save/:schoolId', requireSchoolOwnership, async (req: AuthRequest, 
                  ON CONFLICT(school_id) DO UPDATE SET
                     current_step = 'SETUP_SCHOOL',
                     completed_steps = ?,
-                    is_active = 1`,
+                    is_active = true`,
                 [schoolId, JSON.stringify(['info', 'type', 'terms', 'grading', 'universe', 'teachers', 'fees'])],
                 (err) => err ? reject(err) : resolve()
             );
@@ -403,7 +403,7 @@ router.post('/complete/:schoolId', requireSchoolOwnership, async (req: AuthReque
 
         await new Promise<void>((resolve, reject) => {
             db.getDB().run(
-                `UPDATE setup_state SET is_active = 0, current_step = 'COMPLETE' WHERE school_id = ?`,
+                `UPDATE setup_state SET is_active = false, current_step = 'COMPLETE' WHERE school_id = ?`,
                 [schoolId],
                 (err) => err ? reject(err) : resolve()
             );

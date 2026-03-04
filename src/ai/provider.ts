@@ -59,25 +59,28 @@ export class AIProvider {
             }
             throw new Error(`Unknown provider: ${config.provider}`);
         } catch (error: any) {
-            if (error?.status === 429 && retries > 0) {
+            const status = error?.status || (error as any).response?.status;
+            
+            // Retry on Rate Limit (429) or Service Unavailable (503)
+            if ((status === 429 || status === 503) && retries > 0) {
                 const waitTime = (3 - retries) * 5000;
-                logger.warn({ waitTime, provider: config.provider, model: config.model }, 'Rate limit hit, retrying...');
+                logger.warn({ status, waitTime, provider: config.provider, model: config.model }, 'Retriable error hit, retrying...');
                 await new Promise(resolve => setTimeout(resolve, waitTime));
-                return this.generateText(config, prompt, systemInstruction, retries - 1);
+                return this.generateText(config, prompt, systemInstruction, retries - 1, agentContext, phoneNumber);
             }
 
             logger.error({ 
-                status: (error as any).response?.status,
+                status,
                 message: error.message,
                 data: (error as any).response?.data,
                 provider: config.provider,
                 model: config.model
             }, '❌ AI Provider call failed');
 
-            // Trigger fallback on auth errors (403, 401) or after retries exhausted
-            if (config.fallback && (error?.status === 403 || error?.status === 401 || retries === 0)) {
-                logger.warn({ fallback: config.fallback.provider, errorStatus: error?.status }, 'Triggering configured fallback');
-                return this.generateText(config.fallback, prompt, systemInstruction, 1);
+            // Trigger fallback on auth errors (403, 401), server errors (500, 503), or after retries exhausted
+            if (config.fallback && (status === 403 || status === 401 || status === 500 || status === 503 || retries === 0)) {
+                logger.warn({ fallback: config.fallback.provider, errorStatus: status }, 'Triggering configured fallback');
+                return this.generateText(config.fallback, prompt, systemInstruction, 1, agentContext, phoneNumber);
             }
             throw error;
         }

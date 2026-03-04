@@ -2200,7 +2200,7 @@ Your child, *${student_name}*, has been successfully registered. As a parent, yo
                     // Reactivate existing parent
                     await new Promise<void>((resolve, reject) => {
                         db.getDB().run(
-                            `UPDATE parent_registry SET parent_name = ?, is_active = 1 WHERE parent_id = ?`,
+                            `UPDATE parent_registry SET parent_name = ?, is_active = true WHERE parent_id = ?`,
                             [parent_name, existingParent.parent_id],
                             (err) => err ? reject(err) : resolve()
                         );
@@ -2259,7 +2259,7 @@ Once linked, you can check results, attendance, and fees.`;
             if (operation === 'REMOVE') {
                 const deactivated = await new Promise<boolean>((resolve, reject) => {
                     db.getDB().run(
-                        `UPDATE parent_registry SET is_active = 0 WHERE parent_phone = ? AND school_id = ?`,
+                        `UPDATE parent_registry SET is_active = false WHERE parent_phone = ? AND school_id = ?`,
                         [normalizedPhone, schoolId],
                         (err) => err ? reject(err) : resolve(true)
                     );
@@ -2302,7 +2302,7 @@ Once linked, you can check results, attendance, and fees.`;
             // Find or create parent record
             let parentRecord: any = await new Promise((resolve) => {
                 db.getDB().get(
-                    `SELECT parent_id, parent_name FROM parent_registry WHERE parent_phone = ? AND school_id = ? AND is_active = 1`,
+                    `SELECT parent_id, parent_name FROM parent_registry WHERE parent_phone = ? AND school_id = ? AND is_active = true`,
                     [normalizedPhone, schoolId],
                     (err, row) => resolve(row)
                 );
@@ -3646,7 +3646,7 @@ Please review and reply with your decision (APPROVED/DENIED/CLARIFY).
                 JOIN students s ON pcm.student_id = s.student_id
                 WHERE pr.school_id = ?
                     AND s.class_level = ?
-                    AND pr.is_active = 1
+                    AND pr.is_active = true
                 ORDER BY pr.parent_phone, s.name
             `;
             db.getDB().all(sql, [schoolId, classLevel], (err, rows: any[]) => {

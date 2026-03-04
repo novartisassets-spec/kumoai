@@ -31,9 +31,10 @@ export class SetupRepository {
 
     static async initSetup(schoolId: string, steps: string[]): Promise<void> {
         const sql = `
-            INSERT INTO setup_state (school_id, current_step, pending_steps, is_active)
-            VALUES (?, ?, ?, 1)
-            ON CONFLICT(school_id) DO UPDATE SET is_active = 1
+            INSERT INTO setup_state 
+            (school_id, current_step, completed_steps, pending_steps, is_active, config_draft)
+            VALUES (?, ?, ?, ?, true, ?)
+            ON CONFLICT(school_id) DO UPDATE SET is_active = true
         `;
         return new Promise((resolve, reject) => {
             db.getDB().run(sql, [schoolId, steps[0], JSON.stringify(steps)], (err) => {
@@ -61,7 +62,7 @@ export class SetupRepository {
         }
         if (data.is_active !== undefined) {
             updates.push(`is_active = ?`);
-            params.push(data.is_active ? 1 : 0);
+            params.push(data.is_active ? true : false);
         }
 
         updates.push(`updated_at = CURRENT_TIMESTAMP`);

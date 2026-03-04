@@ -55,7 +55,7 @@ export class SubscriptionService {
             const res = await db.get(`SELECT COUNT(*) as count FROM students WHERE school_id = ?`, [schoolId]);
             current = parseInt(res?.count || '0');
         } else if (resource === 'teachers') {
-            const res = await db.get(`SELECT COUNT(*) as count FROM users WHERE school_id = ? AND role = 'teacher' AND is_active = 1`, [schoolId]);
+            const res = await db.get(`SELECT COUNT(*) as count FROM users WHERE school_id = ? AND role = 'teacher' AND is_active = true`, [schoolId]);
             current = parseInt(res?.count || '0');
         } else if (resource === 'classes') {
             // Check classes count from students table (distinct class_level) or a dedicated classes table if it exists
