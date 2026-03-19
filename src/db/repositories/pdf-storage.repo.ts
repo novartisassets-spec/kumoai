@@ -87,7 +87,7 @@ export class PDFStorageRepository {
     static async confirmPDFContent(documentId: string, notes?: string): Promise<void> {
         return new Promise((resolve, reject) => {
             db.getDB().run(
-                `UPDATE pdf_documents SET status = 'confirmed', confirmed_by_teacher = true, confirmed_at = CURRENT_TIMESTAMP, confirmation_notes = ?
+                `UPDATE pdf_documents SET status = 'confirmed', confirmed_by_teacher = 1, confirmed_at = CURRENT_TIMESTAMP, confirmation_notes = ?
                  WHERE id = ?`,
                 [notes || '', documentId],
                 (err) => {

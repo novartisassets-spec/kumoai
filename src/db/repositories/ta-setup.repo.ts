@@ -162,7 +162,7 @@ export class TASetupRepository {
         // ✅ All checks passed - mark setup as complete
         return new Promise((resolve, reject) => {
             db.getDB().run(
-                `UPDATE ta_setup_state SET is_active = false, completed_at = CURRENT_TIMESTAMP WHERE teacher_id = ? AND school_id = ?`,
+                `UPDATE ta_setup_state SET is_active = 0, completed_at = CURRENT_TIMESTAMP WHERE teacher_id = ? AND school_id = ?`,
                 [teacherId, schoolId],
                 (err) => {
                     if (err) reject(err);
@@ -253,9 +253,13 @@ export class TASetupRepository {
 
                     // 3. Create the mapping
                     db.getDB().run(
-                        `INSERT OR REPLACE INTO class_student_mapping 
+                        `INSERT INTO class_student_mapping 
                         (id, school_id, teacher_id, class_level, student_id, student_name, roll_number, extraction_source, term_id, recorded_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                        ON CONFLICT(id) DO UPDATE SET
+                            student_name = EXCLUDED.student_name,
+                            roll_number = EXCLUDED.roll_number,
+                            recorded_at = EXCLUDED.recorded_at`,
                         [
                             `${teacherId}-${studentId}`,
                             schoolId,
@@ -325,9 +329,13 @@ export class TASetupRepository {
 
         await new Promise<void>((resolve, reject) => {
             db.getDB().run(
-                `INSERT OR REPLACE INTO student_broadsheet 
+                `INSERT INTO student_broadsheet 
                 (id, school_id, teacher_id, class_level, term_id, subjects, broadsheet_data, recorded_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+                VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(id) DO UPDATE SET
+                    subjects = EXCLUDED.subjects,
+                    broadsheet_data = EXCLUDED.broadsheet_data,
+                    recorded_at = EXCLUDED.recorded_at`,
                 [
                     broadsheetId,
                     schoolId,
@@ -359,9 +367,12 @@ export class TASetupRepository {
     ): Promise<void> {
         await new Promise<void>((resolve, reject) => {
             db.getDB().run(
-                `INSERT OR REPLACE INTO student_attendance_records 
+                `INSERT INTO student_attendance_records 
                 (id, school_id, teacher_id, student_id, student_name, class_level, present, marked_date, term_id, recorded_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(id) DO UPDATE SET
+                    present = EXCLUDED.present,
+                    recorded_at = EXCLUDED.recorded_at`,
                 [
                     `ATT-${studentId}-${markedDate}`,
                     schoolId,
@@ -661,9 +672,14 @@ export class TASetupRepository {
     ): Promise<void> {
         await new Promise<void>((resolve, reject) => {
             db.getDB().run(
-                `INSERT OR REPLACE INTO student_attendance_records 
+                `INSERT INTO student_attendance_records 
                 (id, school_id, teacher_id, student_id, student_name, present, marked_date, term_id, manual_entry, manual_notes, recorded_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, CURRENT_TIMESTAMP)`,
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(id) DO UPDATE SET
+                    present = EXCLUDED.present,
+                    manual_entry = EXCLUDED.manual_entry,
+                    manual_notes = EXCLUDED.manual_notes,
+                    recorded_at = EXCLUDED.recorded_at`,
                 [
                     `ATT-${studentId}-${markedDate}`,
                     schoolId,
@@ -710,9 +726,20 @@ export class TASetupRepository {
         
         await new Promise<void>((resolve, reject) => {
             db.getDB().run(
-                `INSERT OR REPLACE INTO student_marks_indexed 
+                `INSERT INTO student_marks_indexed 
                 (id, school_id, student_id, student_name, teacher_id, class_level, subject, term_id, ca1, ca2, midterm, exam, marks_json, total_score, manual_entry, manual_notes, confirmed_by_teacher, recorded_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 1, CURRENT_TIMESTAMP)`,
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 1, CURRENT_TIMESTAMP)
+                ON CONFLICT(id) DO UPDATE SET
+                    ca1 = EXCLUDED.ca1,
+                    ca2 = EXCLUDED.ca2,
+                    midterm = EXCLUDED.midterm,
+                    exam = EXCLUDED.exam,
+                    marks_json = EXCLUDED.marks_json,
+                    total_score = EXCLUDED.total_score,
+                    manual_entry = EXCLUDED.manual_entry,
+                    manual_notes = EXCLUDED.manual_notes,
+                    confirmed_by_teacher = EXCLUDED.confirmed_by_teacher,
+                    recorded_at = EXCLUDED.recorded_at`,
                 [
                     markId,
                     schoolId,

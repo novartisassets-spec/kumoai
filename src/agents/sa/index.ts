@@ -2259,7 +2259,7 @@ Once linked, you can check results, attendance, and fees.`;
             if (operation === 'REMOVE') {
                 const deactivated = await new Promise<boolean>((resolve, reject) => {
                     db.getDB().run(
-                        `UPDATE parent_registry SET is_active = false WHERE parent_phone = ? AND school_id = ?`,
+                        `UPDATE parent_registry SET is_active = 0 WHERE parent_phone = ? AND school_id = ?`,
                         [normalizedPhone, schoolId],
                         (err) => err ? reject(err) : resolve(true)
                     );

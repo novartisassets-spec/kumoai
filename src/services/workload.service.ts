@@ -188,7 +188,7 @@ export class WorkloadService {
         // 1. Get ALL declared subjects for this class across all teachers
         const teachers: any[] = await new Promise((resolve) => {
             db.getDB().all(
-                `SELECT teacher_id, workload_json FROM ta_setup_state WHERE school_id = ? AND is_active = false`,
+                `SELECT teacher_id, workload_json FROM ta_setup_state WHERE school_id = ? AND is_active = 0`,
                 [schoolId],
                 (err, rows) => resolve(rows || [])
             );

@@ -71,7 +71,7 @@ export class FileStorageRepository {
     static async getFileMetadata(fileId: string): Promise<FileRecord | null> {
         return new Promise<FileRecord | null>((resolve, reject) => {
             const sql = `
-                SELECT * FROM file_storage WHERE file_id = ? AND is_archived = false
+                SELECT * FROM file_storage WHERE file_id = ? AND is_archived = 0
             `;
 
             db.getDB().get(sql, [fileId], (err: any, row: any) => {
@@ -95,7 +95,7 @@ export class FileStorageRepository {
      */
     static async listFiles(schoolId: string, userId?: string, fileType?: string): Promise<FileRecord[]> {
         return new Promise<FileRecord[]>((resolve, reject) => {
-            let sql = `SELECT * FROM file_storage WHERE school_id = ? AND is_archived = false`;
+            let sql = `SELECT * FROM file_storage WHERE school_id = ? AND is_archived = 0`;
             const params: any[] = [schoolId];
 
             if (userId) {
@@ -132,7 +132,7 @@ export class FileStorageRepository {
         return new Promise<void>((resolve, reject) => {
             const sql = `
                 UPDATE file_storage 
-                SET is_archived = true, archived_at = CURRENT_TIMESTAMP, archive_reason = ?
+                SET is_archived = 1, archived_at = CURRENT_TIMESTAMP, archive_reason = ?
                 WHERE file_id = ?
             `;
 
@@ -164,7 +164,7 @@ export class FileStorageRepository {
         return new Promise<FileRecord[]>((resolve, reject) => {
             const sql = `
                 SELECT * FROM file_storage 
-                WHERE is_archived = false AND expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP
+                WHERE is_archived = 0 AND expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP
             `;
 
             db.getDB().all(sql, [], (err: any, rows: any[]) => {
@@ -202,7 +202,7 @@ export class FileStorageRepository {
                     MIN(uploaded_at) as oldest,
                     MAX(uploaded_at) as newest
                 FROM file_storage
-                WHERE school_id = ? AND is_archived = false
+                WHERE school_id = ? AND is_archived = 0
                 GROUP BY file_type
             `;
 

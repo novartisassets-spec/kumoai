@@ -431,9 +431,12 @@ export class GARepository {
             // Register or update
             await new Promise<void>((resolve, reject) => {
                 db.getDB().run(
-                    `INSERT OR REPLACE INTO group_registrations 
+                    `INSERT INTO group_registrations 
                     (group_jid, school_id, registered_at)
-                    VALUES (?, ?, CURRENT_TIMESTAMP)`,
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(group_jid) DO UPDATE SET
+                        school_id = EXCLUDED.school_id,
+                        registered_at = EXCLUDED.registered_at`,
                     [groupJid, schoolId],
                     (err) => err ? reject(err) : resolve()
                 );

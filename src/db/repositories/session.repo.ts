@@ -26,8 +26,14 @@ export class SessionRepository {
         const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
         
         const sql = `
-            INSERT OR REPLACE INTO sessions (id, user_id, phone, role, context, expires_at)
+            INSERT INTO sessions (id, user_id, phone, role, context, expires_at)
             VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                user_id = EXCLUDED.user_id,
+                phone = EXCLUDED.phone,
+                role = EXCLUDED.role,
+                context = EXCLUDED.context,
+                expires_at = EXCLUDED.expires_at
         `;
         
         return new Promise((resolve, reject) => {
@@ -192,7 +198,7 @@ export class SessionRepository {
     }
 
     static async revokeToken(token: string): Promise<void> {
-        const sql = `UPDATE token_access_logs SET is_active = false, revoked_at = CURRENT_TIMESTAMP WHERE token = ? AND is_active = 1`;
+        const sql = `UPDATE token_access_logs SET is_active = 0, revoked_at = CURRENT_TIMESTAMP WHERE token = ? AND is_active = 1`;
         
         return new Promise((resolve, reject) => {
             db.getDB().run(sql, [token], (err) => {

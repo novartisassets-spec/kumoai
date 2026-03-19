@@ -388,7 +388,7 @@ export class ParentRepository {
     static async deactivateParent(parentPhone: string, schoolId: string): Promise<boolean> {
         return new Promise((resolve) => {
             db.getDB().run(
-                `UPDATE parent_registry SET is_active = false WHERE parent_phone = ? AND school_id = ?`,
+                `UPDATE parent_registry SET is_active = 0 WHERE parent_phone = ? AND school_id = ?`,
                 [parentPhone, schoolId],
                 (err) => {
                     if (err) {

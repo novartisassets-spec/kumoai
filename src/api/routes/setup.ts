@@ -403,7 +403,7 @@ router.post('/complete/:schoolId', requireSchoolOwnership, async (req: AuthReque
 
         await new Promise<void>((resolve, reject) => {
             db.getDB().run(
-                `UPDATE setup_state SET is_active = false, current_step = 'COMPLETE' WHERE school_id = ?`,
+                `UPDATE setup_state SET is_active = 0, current_step = 'COMPLETE' WHERE school_id = ?`,
                 [schoolId],
                 (err) => err ? reject(err) : resolve()
             );

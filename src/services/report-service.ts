@@ -166,9 +166,17 @@ export class ReportService {
                     // 💾 Persist synthesis to DB (including attendance)
                     await new Promise<void>((resolve) => {
                         db.getDB().run(
-                            `INSERT OR REPLACE INTO terminal_reports 
+                            `INSERT INTO terminal_reports 
                              (id, school_id, student_id, class_level, term_id, total_aggregate, average_score, teacher_remarks, days_present, days_open, status, updated_at)
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'RELEASED', CURRENT_TIMESTAMP)`,
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'RELEASED', CURRENT_TIMESTAMP)
+                             ON CONFLICT(id) DO UPDATE SET
+                                 total_aggregate = EXCLUDED.total_aggregate,
+                                 average_score = EXCLUDED.average_score,
+                                 teacher_remarks = EXCLUDED.teacher_remarks,
+                                 days_present = EXCLUDED.days_present,
+                                 days_open = EXCLUDED.days_open,
+                                 status = EXCLUDED.status,
+                                 updated_at = EXCLUDED.updated_at`,
                             [uuidv4(), schoolId, student.student_id, classLevel, termId, student.total_aggregate, Number(student.average), remark, student.days_present || 0, student.days_open || 0],
                             () => resolve()
                         );

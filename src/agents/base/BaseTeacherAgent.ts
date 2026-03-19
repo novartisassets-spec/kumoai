@@ -2554,9 +2554,15 @@ Keep it co-pilot-like and professional. Use JSON.`;
 
           await new Promise<void>((resolve, reject) => {
               db.getDB().run(
-                  `INSERT OR REPLACE INTO student_marks_indexed 
+                  `INSERT INTO student_marks_indexed 
                   (id, school_id, student_id, student_name, teacher_id, class_level, subject, term_id, marks_json, total_score, confirmed_by_teacher, status, indexed_at)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'CONFIRMED', CURRENT_TIMESTAMP)`,
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'CONFIRMED', CURRENT_TIMESTAMP)
+                  ON CONFLICT(id) DO UPDATE SET
+                      student_name = EXCLUDED.student_name,
+                      marks_json = EXCLUDED.marks_json,
+                      total_score = EXCLUDED.total_score,
+                      confirmed_by_teacher = EXCLUDED.confirmed_by_teacher,
+                      indexed_at = EXCLUDED.indexed_at`,
                   [
                       markId,
                       schoolId,

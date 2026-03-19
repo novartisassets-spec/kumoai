@@ -56,7 +56,7 @@ export class UserRepository {
             SELECT u.id, u.phone, u.role, u.school_id, u.name 
             FROM teacher_access_tokens t
             JOIN users u ON t.teacher_id = u.id
-            WHERE t.token = ? AND t.expires_at > datetime('now') AND t.is_revoked = false
+            WHERE t.token = ? AND t.expires_at > datetime('now') AND t.is_revoked = 0
         `;
 
          return new Promise((resolve, reject) => {
