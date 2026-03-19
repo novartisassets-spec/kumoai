@@ -417,7 +417,7 @@ const { webhookRouter } = require('./api/webhook-handler');
                     // First check parent_registry (where admin-added parents are)
                     parent = await new Promise<any>((resolve) => {
                         db.getDB().get(
-                            `SELECT parent_id as id, parent_name as name, school_id FROM parent_registry WHERE parent_phone = ? AND is_active = true`,
+                            `SELECT parent_id as id, parent_name as name, school_id FROM parent_registry WHERE parent_phone = ? AND is_active = 1`,
                             [normalizedFrom],
                             (err, row) => resolve(row)
                         );

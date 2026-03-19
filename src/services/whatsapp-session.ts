@@ -349,7 +349,7 @@ export class WhatsAppSessionService {
     async sessionExists(schoolId: string): Promise<boolean> {
         try {
             const row = await db.get(
-                'SELECT school_id FROM whatsapp_sessions WHERE school_id = ? AND is_active = true',
+                'SELECT school_id FROM whatsapp_sessions WHERE school_id = ? AND is_active = 1',
                 [schoolId]
             );
             return !!row;

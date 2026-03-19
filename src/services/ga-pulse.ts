@@ -140,7 +140,7 @@ Use phrases that celebrate African parental values.`;
             const schools: any[] = await new Promise((resolve) => {
                 db.getDB().all(
                     `SELECT id, name, whatsapp_group_link FROM schools 
-                     WHERE whatsapp_group_link IS NOT NULL AND is_active = true`,
+                     WHERE whatsapp_group_link IS NOT NULL AND is_active = 1`,
                     [],
                     (err, rows) => resolve(rows || [])
                 );

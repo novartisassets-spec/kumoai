@@ -245,7 +245,7 @@ export class MessageRouter {
     private static async isIdentifiedParent(phone: string, schoolId: string): Promise<boolean> {
         return new Promise((resolve) => {
             db.getDB().get(
-                `SELECT parent_id FROM parent_registry WHERE parent_phone = ? AND school_id = ? AND is_active = true`,
+                `SELECT parent_id FROM parent_registry WHERE parent_phone = ? AND school_id = ? AND is_active = 1`,
                 [phone, schoolId],
                 (err, row: any) => resolve(!!row)
             );
@@ -298,7 +298,7 @@ export class MessageRouter {
     private static async findSchoolByParentPhone(phone: string): Promise<string | null> {
         return new Promise((resolve) => {
             db.getDB().get(
-                `SELECT school_id FROM parent_registry WHERE parent_phone = ? AND is_active = true LIMIT 1`,
+                `SELECT school_id FROM parent_registry WHERE parent_phone = ? AND is_active = 1 LIMIT 1`,
                 [phone],
                 (err, row: any) => resolve(row?.school_id || null)
             );

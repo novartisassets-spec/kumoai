@@ -74,7 +74,7 @@ export class TeacherAuthService {
         return new Promise((resolve) => {
             db.getDB().get(
                 `SELECT teacher_id FROM teacher_profiles 
-                 WHERE teacher_id = ? AND school_id = ? AND is_active = true`,
+                 WHERE teacher_id = ? AND school_id = ? AND is_active = 1`,
                 [teacherId, schoolId],
                 (err, row: any) => {
                     if (err || !row) {

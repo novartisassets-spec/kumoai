@@ -34,7 +34,7 @@ export class SetupRepository {
             INSERT INTO setup_state 
             (school_id, current_step, completed_steps, pending_steps, is_active, config_draft)
             VALUES (?, ?, ?, ?, true, ?)
-            ON CONFLICT(school_id) DO UPDATE SET is_active = true
+            ON CONFLICT(school_id) DO UPDATE SET is_active = 1
         `;
         return new Promise((resolve, reject) => {
             db.getDB().run(sql, [schoolId, steps[0], JSON.stringify(steps)], (err) => {

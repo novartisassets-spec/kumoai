@@ -149,7 +149,7 @@ export class ParentRepository {
         return new Promise((resolve) => {
             db.getDB().get(
                 `SELECT parent_id FROM parent_registry 
-                 WHERE parent_phone = ? AND school_id = ? AND is_active = true AND token_expires_at > CURRENT_TIMESTAMP`,
+                 WHERE parent_phone = ? AND school_id = ? AND is_active = 1 AND token_expires_at > CURRENT_TIMESTAMP`,
                 [parentPhone, schoolId],
                 (err, row: any) => {
                     if (err) {
@@ -172,7 +172,7 @@ export class ParentRepository {
                 `SELECT parent_id, school_id, parent_phone, parent_name, parent_access_token, 
                         token_generated_at, token_expires_at, is_active, created_by_admin_phone
                  FROM parent_registry 
-                 WHERE parent_phone = ? AND school_id = ? AND is_active = true`,
+                 WHERE parent_phone = ? AND school_id = ? AND is_active = 1`,
                 [parentPhone, schoolId],
                 (err, row: any) => {
                     if (err) {
@@ -212,7 +212,7 @@ export class ParentRepository {
                 FROM students s
                 JOIN parent_children_mapping pcm ON s.student_id = pcm.student_id
                 JOIN parent_registry pr ON pcm.parent_id = pr.parent_id
-                WHERE pr.parent_phone = ? AND pr.school_id = ? AND pr.is_active = true
+                WHERE pr.parent_phone = ? AND pr.school_id = ? AND pr.is_active = 1
                 ORDER BY s.name ASC
             `;
             db.getDB().all(sql, [parentPhone, schoolId], (err, rows: any[]) => {
@@ -246,7 +246,7 @@ export class ParentRepository {
             // FIX 1.3: SIMPLIFIED - use only parent_registry as canonical source
             db.getDB().get(
                 `SELECT parent_id, parent_name, token_expires_at FROM parent_registry 
-                 WHERE parent_access_token = ? AND school_id = ? AND is_active = true`,
+                 WHERE parent_access_token = ? AND school_id = ? AND is_active = 1`,
                 [token, schoolId],
                 (err, row: any) => {
                     if (err) {
@@ -354,7 +354,7 @@ export class ParentRepository {
             db.getDB().run(
                 `UPDATE parent_registry 
                  SET token_expires_at = ? 
-                 WHERE parent_id = ? AND school_id = ? AND is_active = true`,
+                 WHERE parent_id = ? AND school_id = ? AND is_active = 1`,
                 [expiresAt.toISOString(), parentId, schoolId],
                 (err) => {
                     if (err) {

@@ -48,7 +48,7 @@ export class SessionRepository {
     }
 
     static async updateActivity(userId: string): Promise<void> {
-        const sql = `UPDATE sessions SET last_activity = CURRENT_TIMESTAMP, is_active = true WHERE user_id = ?`;
+        const sql = `UPDATE sessions SET last_activity = CURRENT_TIMESTAMP, is_active = 1 WHERE user_id = ?`;
         return new Promise((resolve, reject) => {
             db.getDB().run(sql, [userId], (err) => {
                 if (err) reject(err);
@@ -192,7 +192,7 @@ export class SessionRepository {
     }
 
     static async revokeToken(token: string): Promise<void> {
-        const sql = `UPDATE token_access_logs SET is_active = false, revoked_at = CURRENT_TIMESTAMP WHERE token = ? AND is_active = true`;
+        const sql = `UPDATE token_access_logs SET is_active = false, revoked_at = CURRENT_TIMESTAMP WHERE token = ? AND is_active = 1`;
         
         return new Promise((resolve, reject) => {
             db.getDB().run(sql, [token], (err) => {
@@ -210,7 +210,7 @@ export class SessionRepository {
     static async isTokenValid(token: string): Promise<boolean> {
         const sql = `
             SELECT 1 FROM token_access_logs 
-            WHERE token = ? AND is_active = true AND expires_at > CURRENT_TIMESTAMP
+            WHERE token = ? AND is_active = 1 AND expires_at > CURRENT_TIMESTAMP
         `;
         
         return new Promise((resolve, reject) => {

@@ -195,7 +195,7 @@ router.post('/save/:schoolId', requireSchoolOwnership, async (req: AuthRequest, 
                  ON CONFLICT(school_id) DO UPDATE SET
                     current_step = 'SETUP_SCHOOL',
                     completed_steps = ?,
-                    is_active = true`,
+                    is_active = 1`,
                 [schoolId, JSON.stringify(['info', 'type', 'terms', 'grading', 'universe', 'teachers', 'fees'])],
                 (err) => err ? reject(err) : resolve()
             );

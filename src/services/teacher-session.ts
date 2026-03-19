@@ -231,7 +231,7 @@ export class TeacherSessionManager {
         return new Promise((resolve, reject) => {
             db.getDB().get(
                 `SELECT * FROM teacher_sessions 
-                 WHERE token = ? AND is_active = true AND expires_at > datetime('now')`,
+                 WHERE token = ? AND is_active = 1 AND expires_at > datetime('now')`,
                 [token],
                 (err, row: any) => {
                     if (err) {
@@ -266,7 +266,7 @@ export class TeacherSessionManager {
         return new Promise((resolve, reject) => {
             db.getDB().get(
                 `SELECT * FROM teacher_sessions 
-                 WHERE session_id = ? AND is_active = true AND expires_at > datetime('now')`,
+                 WHERE session_id = ? AND is_active = 1 AND expires_at > datetime('now')`,
                 [sessionId],
                 (err, row: any) => {
                     if (err) {
@@ -358,7 +358,7 @@ export class TeacherSessionManager {
     static async cleanupExpiredSessions(): Promise<number> {
         return new Promise((resolve, reject) => {
             db.getDB().run(
-                `UPDATE teacher_sessions SET is_active = false WHERE expires_at < datetime('now') AND is_active = true`,
+                `UPDATE teacher_sessions SET is_active = false WHERE expires_at < datetime('now') AND is_active = 1`,
                 function(err) {
                     if (err) {
                         logger.error({ err }, 'Failed to cleanup expired sessions');

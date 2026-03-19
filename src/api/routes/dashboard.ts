@@ -52,7 +52,7 @@ router.get('/dashboard/stats', async (req: AuthRequest, res: Response) => {
         // Teachers count
         const teachersResult: any = await new Promise((resolve) => {
             db.getDB().get(
-                `SELECT COUNT(*) as count FROM users WHERE school_id = ? AND role = 'teacher' AND is_active = true`,
+                `SELECT COUNT(*) as count FROM users WHERE school_id = ? AND role = 'teacher' AND is_active = 1`,
                 [schoolId],
                 (err, row) => resolve(row)
             );
@@ -72,7 +72,7 @@ router.get('/dashboard/stats', async (req: AuthRequest, res: Response) => {
         // Parents count
         const parentsResult: any = await new Promise((resolve) => {
             db.getDB().get(
-                `SELECT COUNT(*) as count FROM users WHERE school_id = ? AND role = 'parent' AND is_active = true`,
+                `SELECT COUNT(*) as count FROM users WHERE school_id = ? AND role = 'parent' AND is_active = 1`,
                 [schoolId],
                 (err, row) => resolve(row)
             );
@@ -404,7 +404,7 @@ router.get('/teachers', async (req: AuthRequest, res: Response) => {
 
         const { search, limit = 100, offset = 0 } = req.query;
 
-        let sql = `SELECT * FROM users WHERE school_id = ? AND role = 'teacher' AND is_active = true`;
+        let sql = `SELECT * FROM users WHERE school_id = ? AND role = 'teacher' AND is_active = 1`;
         const params: any[] = [schoolId];
 
         if (search) {
@@ -422,7 +422,7 @@ router.get('/teachers', async (req: AuthRequest, res: Response) => {
         // Get total count
         const countResult: any = await new Promise((resolve) => {
             db.getDB().get(
-                `SELECT COUNT(*) as total FROM users WHERE school_id = ? AND role = 'teacher' AND is_active = true`,
+                `SELECT COUNT(*) as total FROM users WHERE school_id = ? AND role = 'teacher' AND is_active = 1`,
                 [schoolId],
                 (err, row) => resolve(row)
             );
