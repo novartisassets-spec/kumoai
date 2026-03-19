@@ -135,7 +135,7 @@ export async function login(credentials: LoginCredentials): Promise<{ user: User
         let sql = `SELECT u.*, s.name as school_name, s.id as school_id 
                    FROM users u 
                    JOIN schools s ON u.school_id = s.id 
-                   WHERE u.phone = ? AND u.is_active = true`;
+                   WHERE u.phone = ? AND u.is_active = 1`;
         
         const params: any[] = [phone];
         
