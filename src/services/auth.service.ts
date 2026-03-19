@@ -376,7 +376,7 @@ export async function refreshTokens(refreshToken: string): Promise<AuthTokens> {
                 `SELECT u.*, s.name as school_name 
                                     FROM users u 
                                     JOIN schools s ON u.school_id = s.id 
-                                    WHERE u.id = ? AND u.is_active = true`,
+                                    WHERE u.id = ? AND u.is_active = 1`,
                  
                 [userId],
                 (err, row) => resolve(row)
@@ -496,7 +496,7 @@ export async function changePassword(userId: string, currentPassword: string, ne
 export async function requestPasswordReset(phone: string): Promise<string> {
     const user: any = await new Promise((resolve) => {
         db.getDB().get(
-            `SELECT id, email FROM users WHERE phone = ? AND is_active = true`,
+            `SELECT id, email FROM users WHERE phone = ? AND is_active = 1`,
             [phone],
             (err, row) => resolve(row)
         );
