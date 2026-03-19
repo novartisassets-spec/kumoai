@@ -441,47 +441,7 @@ export class Database {
         // 4. Convert SQLite datetime(?, 'unixepoch') to PostgreSQL
         newSql = newSql.replace(/datetime\(\?,\s*'unixepoch'\)/gi, 'to_timestamp(?)::timestamp');
 
-        // 5. Handle Boolean Type Mismatch (SQLite 1/0 -> PG true/false)
-        // Only convert if it looks like a boolean assignment or comparison
-        // Target common boolean columns: is_active, is_internal, is_revoked, etc.
-        const booleanFields = [
-            'is_active', 'is_internal', 'is_revoked', 'confirmed_by_teacher', 
-            'present', 'manual_entry', 'has_midterm', 'rank_students'
-        ];
-        
-                        booleanFields.forEach(field => {
-        
-                            // Match "field = 1" or "field = 0" (case insensitive), including optional table aliases
-        
-                            const regex1 = new RegExp(`(?:\\w+\\.)?\\b${field}\\s*=\\s*1\\b`, 'gi');
-        
-                            const regex0 = new RegExp(`(?:\\w+\\.)?\\b${field}\\s*=\\s*0\\b`, 'gi');
-        
-                            
-        
-                            // Also catch literal 1/0 in VALUES lists for these specific columns if the SQL looks like an INSERT
-        
-                            // This is a bit risky but we target common patterns like ", 1)" or ", 1," 
-        
-                            // Better: target the column names in the INSERT part of the SQL.
-        
-                            
-        
-                            // We use a replacement function to preserve the alias if it exists
-        
-                            newSql = newSql.replace(regex1, (match) => {
-        
-                                const parts = match.split('=');
-        
-                                return `${parts[0].trim()} = true`;
-        
-                            });
-        
-                            newSql = newSql.replace(regex0, (match) => {
-                const parts = match.split('=');
-                return `${parts[0].trim()} = false`;
-            });
-        });
+
 
         // 6. Replace ? placeholders with $1, $2, etc.
         if (params.length > 0 || newSql.includes('?')) {
