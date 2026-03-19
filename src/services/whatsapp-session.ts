@@ -207,7 +207,7 @@ export class WhatsAppSessionService {
             // Get all schools that have an active session record
             const schools: any[] = await new Promise((resolve, reject) => {
                 db.getDB().all(
-                    'SELECT school_id FROM whatsapp_sessions WHERE is_active = true',
+                    'SELECT school_id FROM whatsapp_sessions WHERE is_active = 1',
                     (err, rows) => err ? reject(err) : resolve(rows)
                 );
             });

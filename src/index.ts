@@ -125,7 +125,7 @@ async function main() {
         
         // Also check for any schools with existing WhatsApp sessions in DB
         try {
-            const sessions = await db.all('SELECT school_id FROM whatsapp_sessions WHERE is_active = true', []);
+            const sessions = await db.all('SELECT school_id FROM whatsapp_sessions WHERE is_active = 1', []);
             const sessionSchoolIds = new Set(sessions.map((s: any) => s.school_id));
             const schoolsWithSessions = schools.filter(s => sessionSchoolIds.has(s.id));
             // Add schools with sessions that aren't already in the list
